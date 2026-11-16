@@ -38,7 +38,16 @@
   .on { color: #9a8fb0; font-size: 17px; }
   a { color: var(--teal); text-decoration: none; border-bottom: 2px solid var(--purple); }
   a:hover { color: var(--cream); border-bottom-color: var(--orange); }
+  .watch { margin-top: 28px; font-size: 18px; }
+  h2 {
+    font: 16px/1 Silkscreen, ui-monospace, monospace; color: var(--orange);
+    letter-spacing: 2px; margin: 48px 0 16px; font-weight: normal;
+  }
+  .press { list-style: none; padding: 0; margin: 0 auto; max-width: 30em; font-size: 17px; }
+  .press li { margin: 0 0 16px; }
+  .press .outlet { display: block; font: 12px Silkscreen, ui-monospace, monospace; color: #9a8fb0; margin-bottom: 4px; }
   footer { margin-top: 40px; font: 13px Silkscreen, ui-monospace, monospace; color: #6d6680; }
+  footer a + a { margin-left: 20px; }
 </style>
 </head>
 <body>
@@ -49,7 +58,19 @@
   <p class="what">Handheld game consoles, turned into music instruments.</p>
   <p class="on">Debian on the RG35XX, RG351, RG353, TrimUI Brick and friends.
      MIDI 2.0 over the USB cable, a real-time kernel, plugins in the launcher.</p>
-  <footer><a href="https://github.com/sndstation">github.com/sndstation</a></footer>
+  <p class="watch"><a href="https://www.youtube.com/shorts/V-WRcwsgQ_Q">&#9654; Watch the launch video</a></p>
+  <section aria-labelledby="press">
+    <h2 id="press">Press</h2>
+    <ul class="press">
+      <li><span class="outlet">CDM Create Digital Music</span>
+        <a href="https://cdm.link/sndstation-linux-distro-for-game-handhelds">sndstation will transform cheap gaming consoles into music handhelds</a></li>
+      <li><span class="outlet">MusicRadar</span>
+        <a href="https://www.musicradar.com/music-tech/gear-gadgets/i-hope-granular-synthesis-becomes-the-new-doom-something-people-try-to-run-on-all-kinds-of-musical-devices-we-speak-to-the-industrious-innovators-who-have-repurposed-long-dead-video-game-consoles-to-make-music">&ldquo;I hope granular synthesis becomes the new Doom&rdquo;: the innovators repurposing long-dead video game consoles to make music</a></li>
+    </ul>
+  </section>
+  <footer>
+    <a href="https://bsky.app/profile/sndstation.bsky.social">Bluesky</a><a href="https://github.com/sndstation">GitHub</a>
+  </footer>
 </main>
 </body>
 </html>
