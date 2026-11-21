@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>sndstation documentation · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-root="">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="index.html">sndstation <span>docs</span></a>
+    <form class="search" action="search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="index.html" aria-current="page">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="sndstation/docs/getting-started/images.html">Getting an image, and going back</a></li><li><a href="sndstation/docs/getting-started/installation.html">Installation</a></li><li><a href="sndstation/docs/getting-started/quickstart.html">Quickstart</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"></p>
+<h1 id="sndstation-documentation">sndstation documentation</h1>
+<p>sndstation turns small Linux handhelds into music machines. Shops sell these
+units as cheap game consoles, and many end up in a drawer. Each one holds a
+capable ARM computer. sndstation is the ecosystem that puts it to work for
+musicians: an OS image, or a package for a Debian system a unit already
+runs, with a launcher, an SDK, plugins, and updates. David Viens
+at Plogue started the project in 2026.</p>
+<p><strong>Status:</strong> private beta. No unit has passed its checks, no image is public,
+and the API is 0.x. This repository is private until the docs are ready.</p>
+<h2 id="two-places-for-docs">Two places for docs</h2>
+<ul>
+<li><strong>This repository</strong> holds the guides, sorted by who reads them: users,
+  developers, and people who build with coding assistants. Most are stubs
+  today. Each stub says what it will cover and where to look until then.</li>
+<li><strong><span><code>sndstation/sndstation</code></span></strong> holds the reference that
+  sits next to the code: the SDK, the launcher, and each subsystem. This
+  repository links to those pages and does not copy them.</li>
+</ul>
+<h2 id="for-users">For users</h2>
+<ol>
+<li><strong>Find a supported unit.</strong> sndstation runs on RK3326, RK3566, H700, and
+   A133P handhelds. A shop listing names the model, not the chip:
+   <span>supported hardware</span> lists the models,
+   and <span>Identifying your unit</span> will say how to
+   tell which one you hold. To choose one to buy, the
+   <span>device guide</span> lists the units we have validated and ranks the
+   rest on paper; clone this repository and open that file in a browser.</li>
+<li><strong>Get a microSD card of your own.</strong> Do not flash the card the unit came
+   with. Put it aside as it is: it boots the stock firmware, so it shows
+   whether a fault is in the hardware or in what you flashed. For which
+   card to buy, and how to check it for a fake, we defer to Handheld
+   Index's <a class="ext" href="https://handheldindex.pages.dev/accessories/best-sd-card-for-retro-handheld/">guide to SD cards</a>.</li>
+<li><strong>Flash the image for your unit</strong> with
+   <a class="ext" href="https://etcher.balena.io/">balenaEtcher</a>: pick the image, pick the
+   card, flash. For the writing itself we defer to balena's instructions
+   and support. Which image a unit takes is in
+   <a href="sndstation/docs/getting-started/images.html">Getting an image</a>. During the private
+   beta no image is public.</li>
+</ol>
+<p>An image is not the only way in. The platform also installs as a <code>.deb</code>
+   onto an equivalent "Lite" Debian trixie system: the stock Raspberry Pi OS
+   Lite images and Armbian are that. Switchroot's
+   <a class="ext" href="https://wiki.switchroot.org/wiki/linux">L4T-based Linux</a> for the Switch
+   is on Ubuntu 24.04, which is close enough. See
+   <a href="sndstation/docs/getting-started/installation.html#installing-on-a-handheld">Installing on a handheld</a>.
+4. <strong>Put the card in and switch on.</strong> The unit boots to the launcher. Set up
+   the network in SETTINGS → Network: Wi-Fi where the unit has it, or
+   <span>USB networking</span> to a computer where it does
+   not.
+5. <strong>Make music.</strong> The <span>user guide</span> is a stub; until it is
+   written, <span>the launcher</span> describes every screen.</p>
+<h2 id="for-developers">For developers</h2>
+<p>A CLAP plugin built for Linux arm64 against Debian trixie's glibc loads on a
+unit as it is. The launcher finds it, checks it, and rates it
+(<span>CLAP plugins</span>). To go further, pick a route:</p>
+<ul>
+<li><strong>Write an app.</strong> <span>Writing an app</span> takes
+  <span><code>examples/hello</code></span> from a copy on your computer to
+  a unit's launcher. The
+  <a href="sndstation/docs/getting-started/quickstart.html">quickstart</a> is the short
+  version, and the headers are in the
+  <span>API reference</span>.</li>
+<li><strong>Give a plugin the unit's panel and controls.</strong>
+  <span><code>embedded-hardware.md</code></span> describes the host
+  side of the <code>clap.embedded-hardware</code> extension. A plugin that uses it does
+  not depend on sndstation's code.</li>
+<li><strong>Publish packages.</strong>
+  <span>Publishing a vendor source</span>.</li>
+</ul>
+<p>Guides:</p>
+<ul>
+<li><span>Setting up a unit for development</span></li>
+<li><span>Building on macOS with Docker</span></li>
+<li><span>Optimizing for small ARM chips</span></li>
+</ul>
+<p>Building on a Linux desktop, on macOS, and on a handheld is in
+<a href="sndstation/docs/getting-started/installation.html">Installation</a>.</p>
+<h2 id="for-people-who-build-with-coding-assistants">For people who build with coding assistants</h2>
+<p>sndstation does nothing special for coding assistants. An app written with
+one uses the same SDK, the same docs, and the same units as any other.</p>
+<p>We use these tools ourselves. What we do with their output is question it,
+and hold it to the standard of any developer on the team: a person reads
+every line, runs it, and measures it on a unit.</p>
+<ul>
+<li><span>Shipping an app with a coding assistant</span>,
+  a stub.</li>
+<li><span><code>AGENTS.md</code></span> is what an assistant reads before it works in
+  the sndstation repository.</li>
+<li>A change you send to sndstation itself follows the
+  <span>AI use policy</span>: you are its editor.</li>
+</ul>
+<h2 id="writing-a-page">Writing a page</h2>
+<p>Docs are in American English and follow the rules in sndstation's
+<span><code>AI_POLICY.md</code></span> and
+<span><code>.vale.ini</code></span>: plain sentences, no filler, and facts someone
+measured. Start a how-to from the
+<span>guide template</span>. A stub keeps its <strong>Stub</strong>
+note until the page is written.</p>
+    <p class="foot"><code>README.md</code> · changed 2026-11-21</p>
+  </main>
+</div>
+
+<script src="search-index.js" defer></script>
+<script src="assets/search.js" defer></script>
+</body>
+</html>
