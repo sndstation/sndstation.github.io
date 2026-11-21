@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Getting an image, and going back · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-root="../../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="images.html" aria-current="page">Getting an image, and going back</a></li><li><a href="installation.html">Installation</a></li><li><a href="quickstart.html">Quickstart</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../../index.html">Docs</a> / Getting started</p>
+<h1 id="getting-an-image-and-going-back">Getting an image, and going back</h1>
+<blockquote>
+<p><strong>Draft</strong> for #168. Placeholders marked TODO(#236/#…) wait on a decision.
+#236 tracks each one, and the second number is the decision's closed issue.</p>
+</blockquote>
+<p>A private-beta tester runs sndstation from an SD card image. This page says
+where the image for each unit comes from, how to put it on a card, and how
+to go back to the unit's stock firmware.</p>
+<h2 id="where-images-come-from">Where images come from</h2>
+<p>Images are built in <code>sndstation/distribution</code>, a private repository. How an
+invitee gets one (read access to that repository, or an image handed over)
+is TODO(#236/#124). Whether the repository later opens is TODO(#236/#120). Do not
+look for a public download: none is published.</p>
+<h2 id="which-image-each-unit-runs">Which image each unit runs</h2>
+<p>Each unit runs the sndstation rootfs, ROCKNIX or its stock image. The choice
+per unit is TODO(#236/#124). What the docs record:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Unit</th>
+<th>Image</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Anbernic RG351V</td>
+<td>TODO(#236/#124)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>R36S Blue and R40XX</td>
+<td>TODO(#236/#124)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>XU10</td>
+<td>TODO(#236/#124)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Powkiddy RGB30</td>
+<td>TODO(#236/#124)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Anbernic RG40XX H</td>
+<td>TODO(#236/#124). Its LED rings were verified under ROCKNIX (<span>stick-leds.md</span>)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>TRIMUI Smart Pro</td>
+<td>TODO(#236/#124)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Anbernic RG35XX SP</td>
+<td>needs <strong>two</strong>: the sndstation rootfs (the lid is evdev) and a stock BSP image (where <code>hallkey</code> can be read). Which BSP image: TODO(#236/#124)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Raspberry Pi 4, OS Lite</td>
+<td>TODO(#236/#124)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The sndstation rootfs is a Debian system. Where one is not offered for a
+unit, you can install the platform onto a Debian or Ubuntu image the unit
+already runs: see <a href="installation.html#installing-on-a-handheld">Installation</a>.</p>
+<h2 id="before-you-flash-keep-the-stock-card">Before you flash: keep the stock card</h2>
+<p>Flashing overwrites the card. To be able to go back:</p>
+<ul>
+<li><strong>Keep the original card</strong> and flash a second one. This is the safest.</li>
+<li>Or <strong>image the stock card first</strong>, with the card in a reader. On Linux,
+  after finding the device as below:</li>
+</ul>
+<p><code>sh
+  sudo dd if=/dev/sdX of=stock-backup.img bs=4M status=progress</code></p>
+<p>Keep <code>stock-backup.img</code> somewhere safe. It is as large as the card.</p>
+<p>Whether any of the eight boots from internal storage rather than the card
+is TODO(#236/#124). This page assumes the card.</p>
+<h2 id="flashing-a-card">Flashing a card</h2>
+<p><strong>Check the device name twice.</strong> <code>dd</code> writes to whatever it is told to, and
+a wrong name overwrites a disk you want. Look at the size and the label.</p>
+<p>If you would rather not use a terminal, a graphical tool such as balenaEtcher
+writes an image to a card and checks it. Pick the image, pick the card,
+flash.</p>
+<p>With <code>dd</code>:</p>
+<pre><code class="language-sh"># Linux: find the card; it is the one that matches your card's size
+lsblk
+sudo dd if=the-image.img of=/dev/sdX bs=4M conv=fsync status=progress
+
+# macOS
+diskutil list
+diskutil unmountDisk /dev/diskN
+sudo dd if=the-image.img of=/dev/rdiskN bs=4m
+</code></pre>
+<p>If the image is compressed, decompress it first. The image's format is
+TODO(#236/#124).</p>
+<p>When it finishes, eject the card, put it in the unit and switch on. A
+working install boots to the launcher: see
+<a href="installation.html#verifying">Installation, Verifying</a>.</p>
+<h2 id="going-back-to-the-stock-firmware">Going back to the stock firmware</h2>
+<p>Put the unit's original card back, or reflash the vendor's stock image onto
+a card:</p>
+<ol>
+<li>Get the stock image from the vendor's own firmware page for that model.
+   Do not use a copy of unknown origin.</li>
+<li>Flash it as above, or write back your <code>stock-backup.img</code>.</li>
+<li>Boot. The unit is as it was.</li>
+</ol>
+<p>This assumes the unit boots from the card. If it boots from internal
+storage, going back differs: TODO(#236/#124).</p>
+<p>Slot 7 (RG35XX SP) needs a stock BSP image anyway, for the <code>hallkey</code>
+reading; keep it.</p>
+<h2 id="problems">Problems</h2>
+<p>If a unit does not boot after flashing, reflash the card, and try a second
+card if it still fails. A hardware result, good or bad, goes to
+<span>reporting.md</span>. Known problems are in
+<span>known-issues.md</span>.</p>
+    <p class="foot">From <code>docs/getting-started/images.md</code> in sndstation/sndstation, at e50f69b. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../../search-index.js" defer></script>
+<script src="../../../assets/search.js" defer></script>
+</body>
+</html>
