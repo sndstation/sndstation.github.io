@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Supported hardware · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-root="../../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="../getting-started/images.html">Getting an image, and going back</a></li><li><a href="../getting-started/installation.html">Installation</a></li><li><a href="../getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="supported.html" aria-current="page">Supported hardware</a></li><li><a href="known-issues.html">Known issues</a></li><li><a href="reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="../usb-networking.html">USB networking</a></li><li><a href="../launcher.html">The sndstation launcher and session</a></li><li><a href="../updates.html">Software packages</a></li><li><a href="../rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="../audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="../audio-stack.html">The audio stack</a></li><li><a href="../audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="../gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="../unit-identity.html">Which unit this is</a></li><li><a href="../stick-leds.html">The lights around the analog sticks</a></li><li><a href="../device-events.html">Device events</a></li><li><a href="../midi.html">MIDI devices</a></li><li><a href="../audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../../SECURITY.html">Security policy</a></li><li><a href="../../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../../SUPPORT.html">Support</a></li><li><a href="../../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../../index.html">Docs</a> / Hardware</p>
+<h1 id="supported-hardware">Supported hardware</h1>
+<blockquote>
+<p><strong>Draft</strong> for #170. Placeholders marked TODO(#236/#…) wait on a decision.
+#236 tracks each one, and the second number is the decision's closed issue.</p>
+</blockquote>
+<p>The private beta has eight unit slots (#116). Each slot is a unit that has to show something specific on real
+hardware before sndstation calls it supported. None has done that yet.
+Until a slot's issue closes, read every unit below as <strong>private beta, not
+yet verified</strong>: the platform is written for it, parts of it are measured,
+and the rest is a gap listed here.</p>
+<p>Two units have no sound routes for the built-in card: the Powkiddy RGB30
+(slot 4) and the TRIMUI Smart Pro (slot 6). Give each of them to a tester,
+not to an app author who needs sound to build an app.</p>
+<p>The <code>.deb</code> sets a unit up as an sndstation system on six kinds of chip:
+RK3326, RK3566, H700, A133P, MT8167, and a Raspberry Pi with no desktop
+(<code>packaging/make-deb.sh</code>, <code>handheld()</code>). On any other machine it installs but
+changes nothing outside its own directory. <code>SNDSTATION_SYSTEM=yes</code> or <code>no</code>
+overrides the check. The eight slots are the units checked on real hardware. MT8167,
+the PlayStation Classic, is on the install list but has no slot (#185).</p>
+<p>Whether the public beta covers every unit on those chips, or only the eight
+once they pass, is not decided yet (#116). The page says "the beta" for the
+eight.</p>
+<h2 id="shorthand">Shorthand</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F3, F0</td>
+<td>Device families from the survey in #100 §1. F3 is a gamepad handheld, with a d-pad and sticks. F0 is a headless board, with no panel.</td>
+</tr>
+<tr>
+<td>OTP</td>
+<td>One-time-programmable memory on the SoC, written at manufacture. An RK3326 unit's SOC ID is read from it (<a href="../unit-identity.html">unit-identity.md</a>).</td>
+</tr>
+<tr>
+<td><code>pad::layout()</code></td>
+<td>The SDK call that says where each control is on the body, in millimeters. A pad with no layout prints the standard names (<a href="../gamepad-layout.html">gamepad-layout.md</a>).</td>
+</tr>
+<tr>
+<td><code>pixels/1</code></td>
+<td>The display API every host offers a plugin: the plugin draws XRGB8888 pixels into the host's buffer (<span>embedded-hardware.md</span>).</td>
+</tr>
+<tr>
+<td><code>gles/1</code>, <code>vulkan/1</code></td>
+<td>Display APIs for a GPU, which #100 §1 proposes after <code>pixels/1</code>. The extension header does not define them yet.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="the-eight-slots">The eight slots</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Unit</th>
+<th>SoC</th>
+<th>Family</th>
+<th>Status</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Anbernic RG351V</td>
+<td>RK3326</td>
+<td>F3 gamepad handheld</td>
+<td>private beta, not yet verified</td>
+<td>#126</td>
+</tr>
+<tr>
+<td>2</td>
+<td>R36S Blue and R40XX</td>
+<td>RK3326</td>
+<td>F3 gamepad handheld</td>
+<td>private beta, not yet verified</td>
+<td>#127</td>
+</tr>
+<tr>
+<td>3</td>
+<td>XU10</td>
+<td>RK3326</td>
+<td>F3 gamepad handheld</td>
+<td>private beta, not yet verified</td>
+<td>#128</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Powkiddy RGB30</td>
+<td>RK3566</td>
+<td>F3 gamepad handheld</td>
+<td>private beta, not yet verified</td>
+<td>#129</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Anbernic RG40XX H (also the RG CubeXX)</td>
+<td>H700</td>
+<td>F3 gamepad handheld</td>
+<td>private beta, not yet verified; LED rings verified</td>
+<td>#130</td>
+</tr>
+<tr>
+<td>6</td>
+<td>TRIMUI Smart Pro (also the Brick)</td>
+<td>A133P</td>
+<td>F3 gamepad handheld</td>
+<td>private beta, not yet verified</td>
+<td>#131</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Anbernic RG35XX SP</td>
+<td>H700</td>
+<td>F3 gamepad handheld</td>
+<td>private beta, not yet verified</td>
+<td>#132</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Raspberry Pi 4, OS Lite</td>
+<td>BCM2711</td>
+<td>F0 headless board</td>
+<td>private beta, not yet verified</td>
+<td>#133</td>
+</tr>
+</tbody>
+</table></div>
+<p>"Also" means the same slot is expected to speak for a sibling unit. It does
+not mean the sibling has been tried.</p>
+<p>Which image each unit runs (the sndstation rootfs, ROCKNIX, or the stock
+firmware) is TODO(#236/#124). <a href="../getting-started/images.html">images.md</a> has what
+is known.</p>
+<h2 id="what-every-slot-has-to-show">What every slot has to show</h2>
+<p>Each unit's "must show" is its exit criterion. It is what a holder
+measures and reports (<a href="reporting.html">reporting.md</a>). A unit with an open
+gap box has not yet shown it.</p>
+<h2 id="unit-by-unit">Unit by unit</h2>
+<h3 id="1-anbernic-rg351v-rk3326-126">1. Anbernic RG351V (RK3326), #126</h3>
+<ul>
+<li><strong>Must show:</strong> <code>--rt-bench</code> reports a RESULT; the SOC ID row reads from
+  OTP; the rk817 routes are learned by ear and survive a headphone plug;
+  48 kHz / 256 frames runs clean on <code>hw</code>, where <code>plug</code> underran.</li>
+<li><strong>Works, per the docs:</strong> the realtime audio thread. On this unit at 48 kHz
+  / 512 frames with four competing threads, <code>SCHED_FIFO 70</code> measured 90%
+  headroom (<a href="../rt-bench.html">rt-bench.md</a>). Opening the card as <code>hw:0,0</code> was
+  clean at 48 kHz / 256 frames, where alsa-lib's <code>plug</code> over MMAP underran
+  (<a href="../audio-device.html">audio-device.md</a>, §3.3). A gamepad map exists
+  (<code>RG351V (ArkOS)</code>, with inverted analog axes in <code>config/gamepads.json</code>).</li>
+<li><strong>Open gap:</strong> no body layout (<code>pad::layout()</code>), so the pad prints the
+  standard names. The slot's report is also owed.</li>
+<li><strong>Known not to work:</strong> nothing recorded.</li>
+</ul>
+<h3 id="2-r36s-blue-and-r40xx-rk3326-127">2. R36S Blue and R40XX (RK3326), #127</h3>
+<p>One slot, two boxes.</p>
+<ul>
+<li><strong>Must show:</strong> the two units get different SOC IDs and separate
+  <code>audio.json</code> entries; the R36S body's controls and layout are right.</li>
+<li><strong>Works, per the docs:</strong> the two units already have different ids on the
+  ABOUT page, read from OTP though their device trees are alike:
+  <code>RK3326-URKC08010-A599D7394C5B58B6</code> (R40XX) and
+  <code>RK3326-URKC08010-4FE23CAAD163F02F</code> (R36S Blue)
+  (<a href="../unit-identity.html">unit-identity.md</a>). A gamepad map for the R36S and
+  R36S Plus exists in <code>config/gamepads.json</code>.</li>
+<li><strong>Open gaps:</strong> no body layout; no <code>rt-bench</code> result; the slot's report.</li>
+<li><strong>Known not to work:</strong> nothing recorded.</li>
+</ul>
+<h3 id="3-xu10-rk3326-128">3. XU10 (RK3326), #128</h3>
+<ul>
+<li><strong>Must show:</strong> <code>pad::layout()</code> matches the body within the stated 2 mm;
+  rear shoulders and the edge Menu are placed correctly (the face gap of
+  #100 §1, on real hardware).</li>
+<li><strong>Works, per the docs:</strong> a gamepad map and a layout, measured from photos
+  of every side and scaled to the unit's 130 mm height. Its shoulders are on
+  the back and its Menu is the G on the right edge
+  (<a href="../gamepad-layout.html">gamepad-layout.md</a>, <code>config/gamepads.json</code>).</li>
+<li><strong>Open gaps:</strong> no <code>rt-bench</code> result; the slot's report.</li>
+<li><strong>Known not to work:</strong> nothing recorded.</li>
+</ul>
+<h3 id="4-powkiddy-rgb30-rk3566-129">4. Powkiddy RGB30 (RK3566), #129</h3>
+<ul>
+<li><strong>Must show:</strong> the built-in card is picked over HDMI's card 0; the RK3566
+  rt-bench (<code>CONFIG_RT_GROUP_SCHED</code>) finding reproduces or is closed.</li>
+<li><strong>Works, per the docs:</strong> the card choice. Card 0 is HDMI and the speaker
+  codec is card 1, so sndstation takes the first card that is not a display
+  output (<a href="../audio-device.html">audio-device.md</a>, §3.3). A bench run on kernel
+  7.0.2, booted with <code>rt_group_sched=0</code>, was clean through 90% with four
+  competing threads and failed at 95% (<a href="../rt-bench.html">rt-bench.md</a>). A
+  gamepad map exists.</li>
+<li><strong>Open gaps:</strong> no body layout; no routes for the built-in card (there is a
+  card choice but no codec table); the slot's report.</li>
+<li><strong>Known not to work:</strong> realtime scheduling is refused for a login session
+  on a kernel with <code>CONFIG_RT_GROUP_SCHED</code> unless it is booted with
+  <code>rt_group_sched=0</code> (<a href="../rt-bench.html">rt-bench.md</a>, "Allowing it"). Its
+  <code>/proc/asound</code> has no per-stream status, so the bench reports
+  <code>access=unknown buffer=unknown</code>. See <a href="known-issues.html">known-issues.md</a>.</li>
+</ul>
+<h3 id="5-anbernic-rg40xx-h-h700-130">5. Anbernic RG40XX H (H700), #130</h3>
+<p>Also stands for the RG CubeXX.</p>
+<ul>
+<li><strong>Must show:</strong> the rings light in the shipped slot order without root; the
+  h616 route table and the speaker amp switch play where <code>test_h616_route</code>
+  says; SDL's ALSA stream stays off this card (the <code>sun6i_dma_interrupt</code>
+  panic).</li>
+<li><strong>Works, per the docs:</strong> the stick-light rings are <strong>verified</strong>. On an
+  RG40XX H under a ROCKNIX kernel, slots 0-7 are the right ring and 8-15 the
+  left. Each slot took its own color, checked by eye
+  (<a href="../stick-leds.html">stick-leds.md</a>). The h616 codec reports the jack and
+  leaves the speaker on, so its speaker switch is its whole routing; this
+  is tested headless (<code>--fake-audio h616</code>, <code>tests/test_h616_route.cpp</code>),
+  not on the unit (<a href="../launcher.html">launcher.md</a>, Audio).</li>
+<li><strong>Open gaps:</strong> a button map of its own; a body layout; the slot's report.
+  The button map has to land before the developer beta starts. Today there
+  is only the speculative <code>RG28xx (more?)</code> entry, so the unit cannot get
+  past the first screen.</li>
+<li><strong>Known not to work:</strong> the button map above. SDL's ALSA stream under
+  PREEMPT_RT panics the kernel; sndstation uses its own stream, so this only
+  shows if <code>SNDSTATION_AUDIO_STREAM=sdl</code> is set. See
+  <a href="known-issues.html">known-issues.md</a>.</li>
+</ul>
+<h3 id="6-trimui-smart-pro-a133p-131">6. TRIMUI Smart Pro (A133P), #131</h3>
+<p>Also stands for the Brick.</p>
+<ul>
+<li><strong>Must show:</strong> the install recognizes the unit and sets it up to boot into
+  the launcher; the layout's shoulders (on top) are placed; a plugin drawing
+  through <code>pixels/1</code> alone is usable.</li>
+<li><strong>Works, per the docs:</strong> the install's handheld allowlist includes the
+  <code>sun50i-a100</code> device tree, and this is the only unit that uses it
+  (<code>packaging/make-deb.sh</code>). Two gamepad maps exist (one for Knulli, one for
+  the unit's own image) and a layout, taken from the maker's front-on photo
+  scaled to 80 mm, accurate to about 2-3 mm. The photo does not show the top
+  edge, so the shoulders are printed, not placed
+  (<a href="../gamepad-layout.html">gamepad-layout.md</a>, <code>config/gamepads.json</code>).</li>
+<li><strong>Open gaps:</strong> no routes for the built-in card (nothing for the A133P
+  yet); no <code>rt-bench</code> result; the slot's report.</li>
+<li><strong>Known not to work:</strong> sound from the built-in card, until routes exist.
+  See <a href="known-issues.html">known-issues.md</a>.</li>
+</ul>
+<h3 id="7-anbernic-rg35xx-sp-h700-132">7. Anbernic RG35XX SP (H700), #132</h3>
+<p>The only clamshell.</p>
+<ul>
+<li><strong>Must show:</strong> on the sndstation rootfs, the lid closes and opens through
+  evdev <code>gpio-keys-lid</code>, and the lid policy acts on it. On the stock BSP
+  image, the <code>hallkey</code> attribute is read open and shut, and becomes the
+  first entry in <code>config/deviceevents.json</code>.</li>
+<li><strong>Works, per the docs:</strong> on the sndstation rootfs (a mainline kernel) the
+  lid is evdev <code>gpio-keys-lid</code>, value 1 for closed, and the lid policy
+  (<code>suspend</code> by default) is applied to logind at boot
+  (<a href="../device-events.html">device-events.md</a>). The Realtek Bluetooth chip
+  fails to answer on about half of boots; a boot service rebinds it
+  (<a href="../launcher.html">launcher.md</a>, "Bluetooth at boot").</li>
+<li><strong>Open gaps:</strong> a button map of its own (needed before the developer beta,
+  as for slot 5); a body layout; no <code>rt-bench</code> result; a lid entry; the
+  slot's report. <code>config/deviceevents.json</code> ships empty, so the beta is the
+  lid's measurement.</li>
+<li><strong>Known not to work:</strong> the button map above. The lid is not read through
+  <code>hallkey</code> on any unit, because no polarity has been measured. See
+  <a href="known-issues.html">known-issues.md</a>.</li>
+<li><strong>Two images:</strong> the sndstation rootfs, where the lid is evdev, and a
+  stock BSP image, where <code>hallkey</code> can be read: TODO(#236/#124).</li>
+</ul>
+<h3 id="8-raspberry-pi-4-os-lite-bcm2711-133">8. Raspberry Pi 4, OS Lite (BCM2711), #133</h3>
+<p>The headless case, with no pad and no backlight.</p>
+<ul>
+<li><strong>Must show:</strong> the install takes the no-desktop branch; with no pad and
+  no backlight, nothing claims a panel or geometry; <code>vulkan/1</code> can be
+  offered beside <code>pixels/1</code> and <code>gles/1</code>.</li>
+<li><strong>Works, per the docs:</strong> the install treats a Pi, like any board with a
+  device tree, as a handheld only when no desktop is installed
+  (<code>packaging/make-deb.sh</code>). The unit id comes from the
+  firmware's serial in the device tree, for example
+  <code>BCM2711-100000001A2B3C4D</code> (<a href="../unit-identity.html">unit-identity.md</a>).</li>
+<li><strong>Open gaps:</strong> no <code>rt-bench</code> result; the slot's report.</li>
+<li><strong>Known not to work:</strong> nothing recorded.</li>
+</ul>
+<h2 id="probably-supported">Probably supported</h2>
+<p>The eight slots are the units someone has agreed to verify. They are not
+the limit of what runs. sndstation gates on the <strong>SoC</strong>, not the model,
+and on whether a desktop is installed:
+<code>packaging/make-deb.sh</code> sets a machine up as a unit when the device
+tree's <code>compatible</code> matches one of</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th><code>compatible</code></th>
+<th>Slot that covers it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rockchip,rk3326</code></td>
+<td>1, 2, 3</td>
+</tr>
+<tr>
+<td><code>rockchip,rk3566</code></td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>allwinner,sun50i-h700</code></td>
+<td>5, 7</td>
+</tr>
+<tr>
+<td><code>allwinner,sun50i-a100</code></td>
+<td>6 (the A133P's device tree calls itself sun50i-a100)</td>
+</tr>
+<tr>
+<td><code>mediatek,mt8167</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>any other, with no desktop installed</td>
+<td>8 (any Pi, not only the 4); an SBC or a TV box on Armbian's Minimal or Server images, with no slot behind it</td>
+</tr>
+</tbody>
+</table></div>
+<p>An S905X TV box on Armbian (<code>amlogic,meson-gxl</code>, HDMI, a USB gamepad)
+installs this way; it has no slot and has not been verified.</p>
+<p>So a unit this page never names probably works, if it is on one of those
+SoCs. RK3326 is the broadest case: <code>src/rk3326_otp.h</code> comes from reading
+"18+ retail RK3326 handhelds from multiple manufacturers (Anbernic,
+Powkiddy, ...)", and the launcher's identity, audio, and realtime paths key
+off the SoC rather than the model. <code>mediatek,mt8167</code> installs with no slot
+behind it at all.</p>
+<p>What "probably" is doing in that sentence is the <strong>gamepad</strong>. The database
+in <code>config/gamepads.json</code> holds four layouts—<code>ps_classic</code>,
+<code>trimui_smart_pro</code>, <code>xbox</code>, <code>xu10</code>. A unit whose pad matches none of them
+gets the fallback: it runs, and some buttons are in the wrong place. That
+is the expected failure for an unnamed unit, and it is a config fix, not a
+port.</p>
+<h3 id="h700-units">H700 units</h3>
+<p>These are the H700 units with a device tree, 19 in all. Every one of them
+matches <code>allwinner,sun50i-h700</code>, so the <code>.deb</code> sets each up as an sndstation
+system. Only the units in slots 5 and 7 have a holder; the rest are not
+verified.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Unit</th>
+<th>Device tree</th>
+<th>Slot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anbernic RG28XX</td>
+<td><code>sun50i-h700-anbernic-rg28xx.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG34XX</td>
+<td><code>sun50i-h700-anbernic-rg34xx.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG34XX SP</td>
+<td><code>sun50i-h700-anbernic-rg34xx-sp.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG34XX SP, v2 panel</td>
+<td><code>sun50i-h700-anbernic-rg34xx-sp-v2-panel.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX 2024</td>
+<td><code>sun50i-h700-anbernic-rg35xx-2024.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX 2024, rev6 panel</td>
+<td><code>sun50i-h700-anbernic-rg35xx-2024-rev6-panel.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX H</td>
+<td><code>sun50i-h700-anbernic-rg35xx-h.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX H, rev6 panel</td>
+<td><code>sun50i-h700-anbernic-rg35xx-h-rev6-panel.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX Plus</td>
+<td><code>sun50i-h700-anbernic-rg35xx-plus.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX Plus, rev6 panel</td>
+<td><code>sun50i-h700-anbernic-rg35xx-plus-rev6-panel.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX Pro</td>
+<td><code>sun50i-h700-anbernic-rg35xx-pro.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX SP</td>
+<td><code>sun50i-h700-anbernic-rg35xx-sp.dtb</code></td>
+<td>7</td>
+</tr>
+<tr>
+<td>Anbernic RG35XX SP, v2 panel</td>
+<td><code>sun50i-h700-anbernic-rg35xx-sp-v2-panel.dtb</code></td>
+<td>7</td>
+</tr>
+<tr>
+<td>Anbernic RG40XX H</td>
+<td><code>sun50i-h700-anbernic-rg40xx-h.dtb</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>Anbernic RG40XX H, v2 panel</td>
+<td><code>sun50i-h700-anbernic-rg40xx-h-v2-panel.dtb</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>Anbernic RG40XX V</td>
+<td><code>sun50i-h700-anbernic-rg40xx-v.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG40XX V, v2 panel</td>
+<td><code>sun50i-h700-anbernic-rg40xx-v-v2-panel.dtb</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>Anbernic RG CubeXX</td>
+<td><code>sun50i-h700-anbernic-rgcubexx.dtb</code></td>
+<td>5, as a sibling</td>
+</tr>
+<tr>
+<td>Anbernic RG SP</td>
+<td><code>sun50i-h700-anbernic-rg-sp.dtb</code></td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<p>A panel variant is the same unit with a different screen. Which panel a
+slot's holder has is part of the report (<a href="reporting.html">reporting.md</a>).</p>
+<p>For what the beta holds back rather than leaves untested, see the next
+section. Those are decisions, not gaps.</p>
+<p>If you run an unnamed unit, <a href="reporting.html">reporting.md</a> says what to send.
+A result on a unit with no slot is still worth having.</p>
+<h2 id="not-in-the-beta">Not in the beta</h2>
+<p>Each of these is decided in its own issue. Until it is, treat the hardware
+as out.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Hardware</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F4 touch workstation</td>
+<td>#134</td>
+</tr>
+<tr>
+<td>GPU classes V- and X</td>
+<td>#135</td>
+</tr>
+<tr>
+<td>Adreno and RK3568</td>
+<td>#136</td>
+</tr>
+<tr>
+<td>The XF40H stick lights, which ship disabled as unverified</td>
+<td>#137</td>
+</tr>
+</tbody>
+</table></div>
+<p>Units with an entry in the tree but no slot, such as the RG40XX V and the
+XF40H (both in <code>config/leds.json</code>), are not verified.</p>
+<h2 id="reporting-a-result">Reporting a result</h2>
+<p>See <a href="reporting.html">reporting.md</a>. Known problems are in
+<a href="known-issues.html">known-issues.md</a>.</p>
+    <p class="foot">From <code>docs/hardware/supported.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../../search-index.js" defer></script>
+<script src="../../../assets/search.js" defer></script>
+</body>
+</html>

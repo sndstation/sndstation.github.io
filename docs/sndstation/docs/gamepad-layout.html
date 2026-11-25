@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gamepad names, prints and layout · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html" aria-current="page">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="gamepad-names-prints-and-layout">Gamepad names, prints and layout</h1>
+<p>Three things about every control on a pad: the one name the project uses
+for it, what is printed on it, and where it is. Built in the SDK, apart
+from choosing among several bodies that share one ID (below, "Which body
+this is").</p>
+<p>In the SDK (<code>pad.h</code>, <code>buttons.h</code>):</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pad::standardLabel(b)</code></td>
+<td>the standard name: "A" for East, always</td>
+</tr>
+<tr>
+<td><code>pad::label(b)</code></td>
+<td>what the pad in use prints there; the standard name when it prints nothing known</td>
+</tr>
+<tr>
+<td><code>pad::layout()</code></td>
+<td>the pad in use's layout: its name, <code>frontW</code>/<code>frontH</code>, and <code>controls</code> by key</td>
+</tr>
+<tr>
+<td><code>pad::control(b)</code>, <code>pad::control("LSTICK")</code></td>
+<td>one control's print, <code>printAt</code>, <code>panel</code>, and, when <code>placed</code>, <code>x</code>, <code>y</code>, <code>w</code>, <code>h</code>, <code>rotation</code>, <code>shape</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>tests/test_layout.cpp</code> checks all of it on virtual pads.</p>
+<h2 id="names-one-standard-by-position">Names: one standard, by position</h2>
+<p>Docs, code and config call the face buttons by the Nintendo/handheld
+letters, and each letter <strong>means a position, whatever is printed there</strong>:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>name</th>
+<th>position</th>
+<th><code>pad::</code></th>
+<th>config key</th>
+<th>old bit name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>East</td>
+<td><code>East</code></td>
+<td><code>EAST</code></td>
+<td><code>JOY_BUTTON1</code></td>
+</tr>
+<tr>
+<td>B</td>
+<td>South</td>
+<td><code>South</code></td>
+<td><code>SOUTH</code></td>
+<td><code>JOY_BUTTON2</code></td>
+</tr>
+<tr>
+<td>X</td>
+<td>North</td>
+<td><code>North</code></td>
+<td><code>NORTH</code></td>
+<td><code>JOY_BUTTON3</code></td>
+</tr>
+<tr>
+<td>Y</td>
+<td>West</td>
+<td><code>West</code></td>
+<td><code>WEST</code></td>
+<td><code>JOY_BUTTON4</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The rest are named as they are: Up, Down, Left, Right (the d-pad), L1, L2,
+R1, R2, L3, R3 (the stick clicks), Start, Select, Menu, Vol+, Vol−, and the
+sticks LX, LY, RX, RY.</p>
+<p>So "A" in a doc is the East button on every pad, including an Xbox pad
+that prints A on the South one and a unit that prints something else
+entirely. A doc that tells a person what to press names the position the
+first time: "A (East)".</p>
+<p>This is a name, not a print. <strong>What the screen shows is the print.</strong></p>
+<h2 id="prints-what-is-on-the-button">Prints: what is on the button</h2>
+<p>Each control in a layout (below) can say what is printed on or next to
+it, exactly as written, in UTF-8: <code>"A"</code>, <code>"✕"</code>, <code>"△"</code>, <code>"SELECT"</code>, <code>"−"</code>,
+<code>"☰"</code>, <code>"TL"</code>. It cannot give the print's color: <code>Control</code> has no field
+for one (see Open). A control with nothing printed has <code>""</code>.</p>
+<p><code>pad::label(b)</code> returns the print when the unit's layout is known, and
+the standard name otherwise. The launcher and every app that asks the
+SDK show the right print with no change of their own. An app that
+writes "A" itself has chosen the standard name; that is its call.</p>
+<p>A pad with no layout in the database still gets its prints when SDL
+knows its family: an Xbox pad (360, One, Series) prints A at the bottom,
+B, X and Y round it, and a PlayStation pad ✕ ○ □ △. That is prints only,
+with no geometry, and a layout in the database always wins. A Nintendo
+pad prints the standard names already.</p>
+<h2 id="layout-where-things-are">Layout: where things are</h2>
+<p>A new table, <code>"layouts"</code>, beside <code>"maps"</code> in <code>gamepads.json</code>, named like
+the maps. A device entry points to one with <code>"layout": "&lt;name&gt;"</code>. A map
+says which SDL button is which position; a layout says what that
+position looks like on this body. They are separate because one map
+serves several bodies.</p>
+<p>The XU-10 (MagicX/COOPREME, RK3326) is the case that shows why. It is
+Xbox-lettered, so every face button prints something other than its
+standard name. Its Menu button is a "G" on the right-hand edge, under
+the headphone socket, and its shoulders are on the back, not the top.
+Measured from photos of each side, scaled to its 130 mm height:</p>
+<pre><code class="language-jsonc">&quot;layouts&quot;: {
+  &quot;xu10&quot;: {
+    &quot;front_mm&quot;: [82, 130],
+    &quot;controls&quot;: {
+      &quot;NORTH&quot;:   { &quot;print&quot;: &quot;Y&quot;, &quot;at&quot;: [64.5, 74.8], &quot;size&quot;: [8, 8], &quot;shape&quot;: &quot;round&quot; },
+      &quot;WEST&quot;:    { &quot;print&quot;: &quot;X&quot;, &quot;at&quot;: [56.7, 82.8], &quot;size&quot;: [8, 8], &quot;shape&quot;: &quot;round&quot; },
+      &quot;EAST&quot;:    { &quot;print&quot;: &quot;B&quot;, &quot;at&quot;: [72.5, 82.8], &quot;size&quot;: [8, 8], &quot;shape&quot;: &quot;round&quot; },
+      &quot;SOUTH&quot;:   { &quot;print&quot;: &quot;A&quot;, &quot;at&quot;: [64.7, 90.7], &quot;size&quot;: [8, 8], &quot;shape&quot;: &quot;round&quot; },
+      &quot;UP&quot;:      { &quot;at&quot;: [17.5, 76.5], &quot;size&quot;: [8, 10.5] },
+      &quot;LEFT&quot;:    { &quot;at&quot;: [10.9, 83.2], &quot;size&quot;: [10.5, 8] },
+      &quot;RIGHT&quot;:   { &quot;at&quot;: [24.2, 83.0], &quot;size&quot;: [10.5, 8] },
+      &quot;DOWN&quot;:    { &quot;at&quot;: [17.5, 89.6], &quot;size&quot;: [8, 10.5] },
+      &quot;SELECT&quot;:  { &quot;print&quot;: &quot;SELECT&quot;, &quot;print_at&quot;: &quot;below&quot;, &quot;at&quot;: [36.7, 73.2], &quot;size&quot;: [8, 6], &quot;shape&quot;: &quot;pill&quot; },
+      &quot;START&quot;:   { &quot;print&quot;: &quot;START&quot;, &quot;print_at&quot;: &quot;below&quot;, &quot;at&quot;: [45.8, 73.2], &quot;size&quot;: [8, 6], &quot;shape&quot;: &quot;pill&quot; },
+      &quot;LSTICK&quot;:  { &quot;at&quot;: [24.4, 111.6], &quot;size&quot;: [17, 17], &quot;shape&quot;: &quot;round&quot; },
+      &quot;RSTICK&quot;:  { &quot;at&quot;: [57.2, 111.3], &quot;size&quot;: [17, 17], &quot;shape&quot;: &quot;round&quot; },
+      &quot;L1&quot;:      { &quot;print&quot;: &quot;L1&quot;, &quot;print_at&quot;: &quot;below&quot;, &quot;panel&quot;: &quot;back&quot;, &quot;at&quot;: [5.8, 45], &quot;size&quot;: [16, 14] },
+      &quot;L2&quot;:      { &quot;print&quot;: &quot;L2&quot;, &quot;print_at&quot;: &quot;below&quot;, &quot;panel&quot;: &quot;back&quot;, &quot;at&quot;: [23.4, 45], &quot;size&quot;: [18, 14] },
+      &quot;R2&quot;:      { &quot;print&quot;: &quot;R2&quot;, &quot;print_at&quot;: &quot;below&quot;, &quot;panel&quot;: &quot;back&quot;, &quot;at&quot;: [57.7, 45], &quot;size&quot;: [18, 14] },
+      &quot;R1&quot;:      { &quot;print&quot;: &quot;R1&quot;, &quot;print_at&quot;: &quot;below&quot;, &quot;panel&quot;: &quot;back&quot;, &quot;at&quot;: [75.3, 45], &quot;size&quot;: [15, 14] },
+      &quot;MENU&quot;:    { &quot;print&quot;: &quot;G&quot;, &quot;panel&quot;: &quot;right&quot;, &quot;at&quot;: [10.1, 28.9], &quot;size&quot;: [4, 9.5], &quot;shape&quot;: &quot;pill&quot; },
+      &quot;VOLUP&quot;:   { &quot;print&quot;: &quot;+&quot;, &quot;panel&quot;: &quot;left&quot;, &quot;at&quot;: [9.9, 11.9], &quot;size&quot;: [4, 8] },
+      &quot;VOLDOWN&quot;: { &quot;print&quot;: &quot;−&quot;, &quot;panel&quot;: &quot;left&quot;, &quot;at&quot;: [9.9, 23.9], &quot;size&quot;: [4, 8] },
+      &quot;HEADPHONES&quot;: { &quot;panel&quot;: &quot;right&quot;, &quot;at&quot;: [8.9, 14.0], &quot;size&quot;: [4, 4], &quot;shape&quot;: &quot;round&quot; }
+    }
+  }
+},
+&quot;devices&quot;: [
+  { &quot;device&quot;: &quot;XU10 Gamepad&quot;, &quot;vid&quot;: &quot;0xC3B0&quot;, &quot;pid&quot;: &quot;0x0200&quot;, &quot;map&quot;: &quot;xu10&quot;, &quot;layout&quot;: &quot;xu10&quot; }
+]
+</code></pre>
+<p>What an app learns from it:</p>
+<ul>
+<li>A doc's "A (East)" is the button printed B, and the screen says B.</li>
+<li>Start's center is 14.5 mm from X's; Select's is 22 mm from X and 16 mm
+  from the d-pad. Start is the one a thumb on the face buttons finds.</li>
+<li>The shoulders are on the back, 45 mm down, under the fingers that hold
+  it, not on the top edge.</li>
+<li>G is on the right edge, 29 mm down: reached by moving the right hand,
+  not by a thumb.</li>
+</ul>
+<p>The rules:</p>
+<ul>
+<li><strong>Millimeters</strong>, on the front as the user holds it: origin at the top
+  left, x to the right, y down. A control is placed by its center (<code>at</code>)
+  and its bounding <code>size</code>, with <code>shape</code> one of <code>round</code>, <code>rect</code> or <code>pill</code>,
+  and an optional clockwise <code>rotation</code> in degrees. Photos of known size
+  are good enough; ±2 mm does not change an ergonomic answer.</li>
+<li><strong><code>front_mm</code></strong> is the size of the front.</li>
+<li><strong>The sticks</strong> are <code>LSTICK</code> and <code>RSTICK</code>; their clicks, L3 and R3, are
+  where the stick is and need no place of their own.</li>
+<li><strong>Other panels:</strong> <code>"panel"</code> is <code>back</code>, <code>top</code>, <code>bottom</code>, <code>left</code> or
+  <code>right</code> (the front is the default). Every panel uses the front's x and
+  y as seen from the front, so L1 is on the left wherever it is: the back
+  is seen through the unit, not from behind. An edge has no extent in one
+  of them and uses the depth from the front face instead: the top and
+  bottom are <code>[x, depth]</code>, the sides <code>[depth, y]</code>.</li>
+<li><strong><code>print_at</code></strong> says where a print is when it is beside the control
+  rather than on it: <code>above</code>, <code>below</code>, <code>left</code> or <code>right</code>.</li>
+<li><strong>The headphone socket</strong> may be placed as well (<code>"HEADPHONES"</code>), with
+  no print: a cable coming out of an edge is part of how the unit is
+  held.</li>
+<li><strong>A control the layout leaves out</strong> has no position, and an app must
+  not assume one.</li>
+<li><strong>A device with no layout</strong> has no geometry: its prints are its SDL
+  family's, as above, or the standard names.</li>
+<li><strong>A user's own <code>gamepads.json</code></strong> (the one the CONTROLS mapper writes)
+  replaces the shipped file, and one saved before layouts existed has
+  none. So the shipped file's layouts are always read too: a device whose
+  entry has no <code>"layout"</code> takes the shipped entry's, and a layout name is
+  looked up in the user's file first, then the shipped one.</li>
+</ul>
+<p>An app can then ask what it needs. For example, a music app can ask
+whether Select is close enough to the face buttons that it gets pressed
+by accident, and leave it out of a modifier on such a body.</p>
+<h2 id="which-body-this-is">Which body this is</h2>
+<p>An external pad is its device entry: vid, pid and name.</p>
+<p>The built-in controls belong to the unit, and one ID does not always mean
+one body: clones share USB IDs and a device tree, and differ in prints
+and placement. Where that is known, the device entry lists the
+candidates, <code>"layout": ["r36s-a", "r36s-b"]</code>. CONTROLS asks once, with a
+drawing of each, and keeps the choice for this unit (<code>unit-identity.md</code>),
+as the audio profile is kept.</p>
+<p><strong>Not built yet:</strong> the list is read, and its first layout is used (the
+log says so). The CONTROLS question is still to come.</p>
+<h2 id="clap">CLAP</h2>
+<p>The fields are those of an element in the embedded-hardware draft
+(<code>clap_extensions/embedded-hardware.h</code>, <code>clap.embedded-hardware/1</code>), so a
+host fills the draft straight from the layout (not done yet: the host
+still reports one panel with no geometry):</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>layout</th>
+<th>draft element / panel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>print</code></td>
+<td><code>label</code></td>
+</tr>
+<tr>
+<td>nothing: a layout has no print color</td>
+<td><code>label_color</code>, left unset</td>
+</tr>
+<tr>
+<td><code>at</code></td>
+<td><code>x_mm</code>, <code>y_mm</code></td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td><code>width_mm</code>, <code>height_mm</code></td>
+</tr>
+<tr>
+<td><code>rotation</code></td>
+<td><code>rotation_deg</code></td>
+</tr>
+<tr>
+<td><code>shape</code></td>
+<td><code>shape</code></td>
+</tr>
+<tr>
+<td><code>print_at</code></td>
+<td><code>label_position</code></td>
+</tr>
+<tr>
+<td><code>panel</code></td>
+<td><code>panel_id</code> (front, back, an edge)</td>
+</tr>
+<tr>
+<td><code>front_mm</code></td>
+<td>the front panel's <code>width_mm</code>, <code>height_mm</code></td>
+</tr>
+<tr>
+<td>no layout</td>
+<td><code>NO_GEOMETRY</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The draft places panels on "the device's front" only. It has no word for
+the back or an edge, and the XU-10 has controls on both: a point to
+raise with the draft. The headphone socket is the draft's two-position SWITCH.</p>
+<h2 id="open">Open</h2>
+<ul>
+<li>Which unit families need the per-unit choice, and the CONTROLS question
+  that makes it.</li>
+<li>The CLAP host describing the device from the layout.</li>
+<li>Layouts for the other units: so far the XU-10 (measured), the
+  PlayStation Classic controller (✕ ○ □ △, placed from its size), and an
+  Xbox pad's prints (the PowerA).</li>
+<li>A print's color (the PlayStation symbols' green, red, blue and pink):
+  not in the format. <code>Control</code> has no color field, so there is nowhere
+  for one to go yet.</li>
+</ul>
+    <p class="foot">From <code>docs/gamepad-layout.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

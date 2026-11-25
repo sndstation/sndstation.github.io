@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The audio stack · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html" aria-current="page">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="the-audio-stack">The audio stack</h1>
+<p>How sound gets from a program to the speaker on a sndstation unit: who opens the device, who keeps
+it, and how it passes from the launcher to an app and back. This is the overview. The details are
+in <a href="audio-device.html"><code>audio-device.md</code></a> (choosing the card, formats, timing),
+<a href="audio-levels.html"><code>audio-levels.md</code></a> (volume and maximums) and <a href="audio-page.html"><code>audio-page.md</code></a>
+(the AUDIO page).</p>
+<p>Parts of this are planned and not built yet, first written up as
+<span>sndstation#251</span>. Each section says which
+parts: <strong>Now</strong> is what the code does today, and <strong>#251</strong> is what it is moving to. The order they
+are built in is the table at the end.</p>
+<h2 id="the-rules">The rules</h2>
+<ol>
+<li><strong>One owner per process.</strong> Exactly one place in a process opens the audio device and the MIDI
+   ports, and keeps them. In the launcher, that is the launcher. In an app, it is the app.
+   Everything else plays <em>into</em> the owner's stream and never opens, closes or reopens a device.</li>
+<li><strong>ALSA directly, on a unit.</strong> Playback goes from <code>AudioOut</code> to alsa-lib, through the SDK's own
+   stream (<code>alsastream</code>). SDL may start its audio subsystem and list devices, but on Linux it
+   never plays. SDL's own stream is for macOS and Windows development builds, and for tests that
+   use its <code>disk</code> driver.</li>
+<li><strong>Open once, close rarely.</strong> Opening and closing a device is what pops. The owner opens at
+   start and closes only when it must (see "When the device is closed" below). Every open, close
+   and reopen fades.</li>
+<li><strong>Leave nothing behind.</strong> A process that started with the device free hands it on free, and
+   hands on its environment as it found it (<code>AUDIODEV</code>, <code>SDL_AUDIODRIVER</code>).</li>
+</ol>
+<h2 id="the-layers">The layers</h2>
+<pre><code>  your sound                 a synth, a sampler, a plugin, a test tone
+      │  render(out, frames) on the audio thread
+      ▼
+  audiomix::Mixer            sums the sources, fades each one in and out
+      │  the owner's RenderFn
+      ▼
+  AudioOut                   which card, the conversion to its format, dither,
+      │                      the system volume, meters, health, card changes
+      ▼
+  alsastream                 the SDK's alsa-lib stream: snd_pcm_writei on the card
+      │
+      ▼
+  ALSA  →  the card  →  speaker / headphones / USB interface
+</code></pre>
+<ul>
+<li><strong>A source</strong> knows nothing about devices. It fills interleaved float stereo when asked, at the
+  rate it is told (<code>rateChanged()</code>).</li>
+<li><strong><code>AudioOut</code></strong> is the device.</li>
+<li>It picks the card the way handhelds need: the card itself (<code>hw:CARD=&lt;id&gt;,DEV=0</code>), not
+    <code>default</code>, skipping display outputs and virtual cards (<a href="audio-device.html">audio-device.md
+    §3.3</a>).</li>
+<li>It converts to the card's format in one loop that also counts clips and dithers.</li>
+<li>It applies the system volume, ramped.</li>
+<li>It keeps the callback's health: gaps, underruns and CPU.</li>
+<li>It follows a USB card that is plugged in or pulled.</li>
+<li><strong><code>alsastream</code></strong> is what plays. An <code>AudioOut</code> is handed the unit's settings (rate, period and
+  format, from the AUDIO page) and its realtime priority (<code>rt.h</code>). SDL is not on that path.</li>
+</ul>
+<p><strong>Now:</strong></p>
+<ul>
+<li>The launcher has one stream and a mixer (<code>launcher/audio.h</code>). An app's <code>AudioOut</code> has its own
+  render function, which is the app's mix.</li>
+<li>On Linux, <code>AudioOut</code> plays every device through <code>alsastream</code>: the card it chose, <code>AUDIODEV</code> or
+  <code>audio.alsa_pcm</code> as given, and <code>default</code> with whatever the system put behind it (a <code>plug</code>, a
+  <code>dmix</code>, a sound server's ALSA plugin). SDL's audio is started on its ALSA driver for the log's
+  device list, whatever it would pick first (<a href="audio-device.html">audio-device.md</a> §3.0).</li>
+<li><strong>Not yet measured on a unit with a sound server</strong> (KNULLI) or a <code>dmix</code>: <code>alsastream</code> starts with
+  the whole buffer queued and blocks in <code>snd_pcm_writei</code>, as <code>aplay</code> does. Underruns (AUDIO →
+  Diagnostics) and latency through <code>default</code> against <code>SNDSTATION_AUDIO_STREAM=sdl</code> on the same
+  unit settle it; if a server needs it, <code>default</code> alone gets a smaller start threshold.</li>
+</ul>
+<h2 id="opening">Opening</h2>
+<p>The owner does this once, when it starts:</p>
+<pre><code class="language-cpp">#include &lt;sndstation/audioout.h&gt;
+#include &lt;sndstation/rt.h&gt;
+
+AudioOut::Settings set = AudioOut::loadSettings();   // the unit's: card, rate, period, format
+rt::applySettings(set.realtimePriority, set.cpu);     // the audio thread's priority and core
+AudioOut out;
+out.open(set, &amp;render, &amp;rateChanged, this);           // opened paused
+out.start();                                          // fades in
+</code></pre>
+<p><code>loadSettings()</code> reads the platform's system.json and the unit's audio.json. The AUDIO page
+writes the latter, and every program on the unit opens with the same settings, so an app plays on
+the card, at the rate and period the user set up.</p>
+<p>With no device (a headless run with <code>--shots</code>, or nothing that opens), <code>open()</code> still succeeds,
+and the owner calls <code>out.pumpManual(dt)</code> from its own loop. Everything above the device keeps
+running and stays testable.</p>
+<h2 id="while-it-runs">While it runs</h2>
+<p>Once a frame, on the main thread, the owner calls:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Call</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>out.service()</code></td>
+<td>a USB card plugged in or pulled: the stream moves to the card the rules choose now, and the sources are told the new rate</td>
+</tr>
+<tr>
+<td><code>out.followJack()</code></td>
+<td>the headphone socket: the right output's volume and maximum</td>
+</tr>
+<tr>
+<td><code>out.pumpManual(dt)</code></td>
+<td>only with no device: renders the time that passed</td>
+</tr>
+</tbody>
+</table></div>
+<p>Only the owner changes the device. In the launcher, the AUDIO page is the only place that reopens
+it: a new period (<code>reopen()</code>), rate (<code>setRate()</code>) or card (<code>setDevice()</code>). Each of those fades out,
+reopens and fades in (<a href="audio-device.html">audio-device.md</a> §3.6).</p>
+<p>The system volume is not the owner's. Vol± and the AUDIO page set it per output, every program
+shares it, and <code>AudioOut</code> applies it after the render function (<a href="audio-levels.html">audio-levels.md</a>).</p>
+<h2 id="playing-into-the-stream">Playing into the stream</h2>
+<p>A page, the game or a plugin is a source attached to the owner's mixer (<code>audiomix.h</code>):</p>
+<pre><code class="language-cpp">struct Tone : audiomix::Source {
+    void render(float* out, int frames) override { /* add into out */ }
+    void rateChanged(int rate) override { /* re-tune */ }
+};
+
+Tone tone;
+launcherAudio.mixer().attach(&amp;tone);   // fades in from the next block
+// ...
+launcherAudio.mixer().detach(&amp;tone);   // fades out; returns once the audio thread let go
+</code></pre>
+<p>The mixer applies the system volume to each source, unless the source says it applies its own
+(<code>ownVolume()</code>): the AUDIO page plays past it while an output's maximum is judged. A source fades
+in when attached and out when detached, and <code>detach()</code> returns once the audio thread has let go,
+so the source may then be destroyed.</p>
+<p><strong>Now:</strong> the AUDIO page and the game are sources on the launcher's stream. Built alone (<code>--shots</code>,
+the tests), each has a stream of its own, opened and closed with it, as before.</p>
+<p>A CLAP plugin is played the same way. <code>ClapPlayer</code> opens no device and no MIDI ports:</p>
+<ul>
+<li><strong>In the launcher</strong>, it is a source on the launcher's mixer, activated at the stream's rate
+  (<code>rateChanged()</code> activates it again at a new one), and the launcher's MIDI is pointed at it.</li>
+<li><strong>In an app with an engine of its own</strong>, the app activates it (<code>activate(rate, maxFrames)</code>), its
+  audio thread calls <code>ClapPlayer::process()</code> with its notes and parameter changes, timed within
+  the block, and mixes the result itself. The app lists and sets its parameters (<code>params()</code>,
+  <code>setParam()</code>) and keeps its state as bytes in its own files (<code>saveState()</code>, <code>loadState()</code>).
+  A restart the plugin asks for is answered at its next block: silence while it is activated
+  again on the main thread (<code>update()</code>).</li>
+</ul>
+<h2 id="midi">MIDI</h2>
+<p>MIDI follows the same rule. The owner starts it (<code>midi::start()</code>), listens to the unit's inputs
+(<code>midi::listen()</code>), and stops it (<code>midi::stop()</code>) at the same moments it closes the audio device. A
+page or a plugin never starts or stops MIDI itself.</p>
+<p>In the launcher that is <code>LauncherMidi</code> (<code>launcher/launchermidi.h</code>): started with the launcher, it
+hands what arrives to the page in front that takes it (a played plugin) or to nobody, and a page's
+sink is taken away only once a message on its way to it has been delivered. Closed for the
+hand-over and every way out, let go of while the screensaver is up and while the unit sleeps. The
+MIDI monitor opens every port itself, each with its own sink, so while it shows the listening is
+paused and the ports are its; the launcher listens again after.</p>
+<h2 id="the-launchers-life-and-the-hand-over">The launcher's life, and the hand-over</h2>
+<p>The launcher is one turn of a loop. <code>sndstation-session</code> starts it, the launcher <strong>replaces itself</strong>
+with the app you pick (<code>exec</code>), and when the app exits the session starts the launcher again.
+There is never a launcher and an app at once, so the device always has exactly one owner.</p>
+<pre><code> sndstation-session
+   │
+   ▼
+ ┌─ LAUNCHER ──────────────────────────────────────────────────────────────┐
+ │  start: window → audio OPEN, fade in → MIDI start                       │
+ │                                                                         │
+ │    pages, the game, a plugin ── play into the stream (sources)          │
+ │    AUDIO page ── may REOPEN (period, rate, card), with fades            │
+ │                                                                         │
+ │    screensaver / sleep ── fade out, CLOSE, MIDI stop     (device free)  │
+ │       a button / waking ── OPEN, fade in, MIDI start                    │
+ │                                                                         │
+ │  app picked: fade out → CLOSE → MIDI stop → AUDIODEV as found          │
+ │              → SDL shut down → exec(app)                                │
+ └──────────────────────────────────────────┬──────────────────────────────┘
+                                            │ the same process, now the app
+                                            ▼
+ ┌─ APP ───────────────────────────────────────────────────────────────────┐
+ │  start: AudioOut OPEN with loadSettings() (the same card and timing)    │
+ │  runs:  service() / followJack() each frame                            │
+ │  exit:  CLOSE (AUDIODEV put back), MIDI stop, exit                      │
+ └──────────────────────────────────────────┬──────────────────────────────┘
+                                            │ the app's process ends
+                                            ▼
+ sndstation-session starts the launcher again → LAUNCHER start (above)
+</code></pre>
+<h3 id="when-the-device-is-closed">When the device is closed</h3>
+<p>The launcher closes the device only:</p>
+<ul>
+<li>when it hands over to an app;</li>
+<li>when it shuts down, restarts or exits, whatever the path;</li>
+<li>when the screensaver starts, or the unit goes to sleep;</li>
+<li>when the AUDIO page reopens it for a new period, rate or card.</li>
+</ul>
+<p>Nothing else closes it, and it is opened again at the end of each of these but the first two.</p>
+<h3 id="handing-over-to-an-app">Handing over to an app</h3>
+<ol>
+<li><strong>Fade out, then close</strong>, as every close does. The app opens a free card. Two processes can't
+   share a card without a sound server, so the hand-over is a short fade rather than nothing.</li>
+<li><strong>MIDI stopped.</strong> The app opens the ports it wants.</li>
+<li><strong><code>AUDIODEV</code> as the launcher found it.</strong> An <code>AudioOut</code> writes <code>AUDIODEV</code> while it plays and
+   puts it back on its last close, and <code>launch()</code> sets it once more to what the launcher was
+   started with. The app chooses its card by the same rules as when it is started from a shell.
+   (Before this was fixed, an app could inherit the launcher's choice, take it for a user's, and
+   play through SDL's stream instead: see the <span>changelog</span>.)</li>
+<li><strong>SDL shut down, then <code>exec</code>.</strong> The app gets the display, the pads and the card, in the same
+   process, with <code>SNDSTATION_SESSION=1</code> in its environment.</li>
+</ol>
+<h3 id="coming-back">Coming back</h3>
+<p>The app exits, its <code>AudioOut</code> closes (the destructor does it too), and the process ends. The
+session starts the launcher afresh, and the launcher opens the device as at any start. Nothing is
+carried over, so a card that was plugged in while the app ran is the one the launcher opens.</p>
+<h2 id="writing-an-app">Writing an app</h2>
+<ul>
+<li><strong>Open one <code>AudioOut</code> at start, with <code>AudioOut::loadSettings()</code></strong>, and close it at exit. Don't
+  open a second one, and don't close and reopen it to change what plays: mix inside your own
+  render function.</li>
+<li><strong>Call <code>service()</code> and <code>followJack()</code> once a frame.</strong> Leave the volume to the system unless you
+  set <code>appVolume</code> and apply <code>volumeGain()</code> yourself.</li>
+<li><strong>Don't set <code>AUDIODEV</code>, and don't open devices through SDL.</strong> A user who sets <code>AUDIODEV</code> is
+  making a choice, and the SDK honors it.</li>
+<li><strong>With <code>SNDSTATION_SESSION=1</code>, quitting is going back.</strong> Close what you opened, and exit. The
+  session brings the launcher back.</li>
+<li><strong>Hosting plugins:</strong> load them with <code>ClapPlayer</code>, activate them at your stream's rate, and call
+  <code>process()</code> from your own audio thread, or attach them to an <code>audiomix::Mixer</code>. Point your MIDI
+  at them (they are <code>midi::Sink</code>s); never let them open a device.</li>
+</ul>
+<h2 id="rules-for-sdk-contributors">Rules for SDK contributors</h2>
+<ul>
+<li><strong>Only the owner calls <code>open()</code>, <code>close()</code>, <code>reopen()</code>, <code>setRate()</code> or <code>setDevice()</code>.</strong> A new
+  piece that makes sound is a source.</li>
+<li><strong>No <code>SDL_OpenAudioDevice</code> on Linux.</strong> SDL's audio subsystem may list devices and pick its
+  driver; playback goes through <code>alsastream</code>.</li>
+<li><strong>No <code>setenv("AUDIODEV")</code> outside <code>AudioOut</code>'s own writer</strong>, which puts it back.</li>
+<li><strong>Every change to a running stream fades.</strong> <code>test_audioout</code> checks for steps.</li>
+</ul>
+<h2 id="diagnostics">Diagnostics</h2>
+<p>The log, in order, says what happened:</p>
+<ul>
+<li><code>audio: driver 'alsa', N playback device(s)</code>: SDL's list, for diagnosis only.</li>
+<li><code>audio: ALSA device '&lt;pcm&gt;' (&lt;why&gt;)</code>: which device, and which rule chose it. <strong><code>(AUDIODEV, set
+  outside)</code> in an app started from the launcher means something leaked</strong>: report it.</li>
+<li><code>audio: &lt;rate&gt; Hz, &lt;frames&gt; frames, handed &lt;format&gt;</code>: what the device accepted.</li>
+</ul>
+<p>The stream's health (gaps, underruns, clips, CPU) is on AUDIO → Diagnostics. To check that
+nothing holds the card during the screensaver, run <code>fuser -v /dev/snd/*</code>.</p>
+<p><code>SNDSTATION_AUDIO_STREAM=sdl</code> plays through SDL's stream on the same device, to compare the two: a
+developer's switch, and each open through it says so in the log, as does a build that plays through
+SDL's stream for any other reason (<code>audio: SDL's stream, not alsa-lib's: ...</code>).</p>
+<h2 id="what-is-built-and-what-is-coming">What is built, and what is coming</h2>
+<p>In this order, each its own pull request:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>Now</th>
+<th>Coming</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The device picked by the SDK (card itself, not <code>default</code>)</td>
+<td>yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>AUDIODEV</code> put back on the last close; the launcher hands it on as found</td>
+<td>yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Playback through <code>alsastream</code>, every device, on Linux</td>
+<td>yes (not yet measured behind a sound server)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Fades at open, close and reopen</td>
+<td>yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td>One stream in the launcher, with a mixer of sources</td>
+<td>yes: AUDIO, the game, a played plugin</td>
+<td>—</td>
+</tr>
+<tr>
+<td>The screensaver and sleep free the audio device</td>
+<td>yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ClapPlayer</code> without a device, playable in an app's engine</td>
+<td>yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td>The launcher owns MIDI the same way, freed by the screensaver and sleep</td>
+<td>yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td>SETTINGS → POWER: the screensaver's kind and wait, Sleep after</td>
+<td>no</td>
+<td>1</td>
+</tr>
+<tr>
+<td>No pop at the hand-over to an app</td>
+<td>—</td>
+<td>not planned: two processes need a sound server</td>
+</tr>
+</tbody>
+</table></div>
+    <p class="foot">From <code>docs/audio-stack.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

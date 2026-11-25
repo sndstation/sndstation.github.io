@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Audio levels: the system volume and the maximums · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html" aria-current="page">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="audio-levels-the-system-volume-and-the-maximums">Audio levels: the system volume and the maximums</h1>
+<p>How loud the unit plays, and how loud it can never play. Two layers:</p>
+<ul>
+<li><strong>Maximums</strong>, per output: the levels the hardware gain stages are put at
+  while that output plays. The loudest the output is meant to go, set by a
+  person (SYSTEM LEVELS, on the AUDIO page) and applied by the platform.</li>
+<li><strong>The system volume</strong>, per output: a software volume in dB that every
+  program shares. 0 dB is the maximum, so the volume only ever turns down.</li>
+</ul>
+<p>Protecting the speaker <em>is</em> the maximum: nothing in the SDK can make an
+output louder than the levels kept for it. There is no filter and no
+limiter.</p>
+<p>Where they are kept and who decides which output plays is
+<a href="audio-page.html"><code>audio-page.md</code></a>; the rest of the audio path is
+<a href="audio-device.html"><code>audio-device.md</code></a>.</p>
+<h2 id="the-layers">The layers</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Set by</th>
+<th>Kept in the unit's audio.json</th>
+<th>Moves while playing?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Maximum</strong>, per output: each playback level's value, with its range</td>
+<td>a person, in SYSTEM LEVELS and nowhere else</td>
+<td><code>endpoints.&lt;output&gt;.maximum</code></td>
+<td>no: applied when the output is chosen</td>
+</tr>
+<tr>
+<td><strong>System volume</strong>, per output, in dB</td>
+<td>Vol± anywhere, the AUDIO page, an app's own control</td>
+<td><code>endpoints.&lt;output&gt;.volume_db</code></td>
+<td>yes, ramped</td>
+</tr>
+<tr>
+<td><strong>The app's own mix</strong></td>
+<td>the app</td>
+<td></td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p>At the maximum, the samples reach the hardware unchanged and the hardware
+is at the loudest level that output is meant to play. So 0 dBFS out of
+<code>AudioOut</code> at 0 dB of volume is the loudest the output goes. An app's mix
+past full scale is hard-clipped at the conversion: the maximum is what full
+scale means.</p>
+<h2 id="outputs-endpoints">Outputs (endpoints)</h2>
+<p>Each endpoint keeps its own volume and maximum: <code>speaker</code>, <code>headphones</code>,
+<code>speaker+headphones</code>, <code>out</code> (a unit that cannot tell which plays),
+<code>builtin</code> (a unit not set up), <code>usb:&lt;vid:pid&gt;</code>, <code>card:&lt;id&gt;</code>, <code>default</code>.
+Which one plays is decided by <code>audiounit::endpointOf</code> from the card
+playing, the unit's set-up, its Plays on and the socket
+(<a href="audio-page.html#outputs">audio-page.md</a>). All of them belong to the unit:
+a USB interface used on two units keeps a volume on each.</p>
+<h2 id="the-value">The value</h2>
+<ul>
+<li><strong>dB, −60 to 0</strong>, then <strong>mute</strong> one press below −60. Up from mute is −60.</li>
+<li><strong>1.5 dB a press.</strong> Steps in dB are the same size to the ear anywhere.</li>
+<li><strong>First time</strong>: 0 dB, except an output with headphones on it (headphones,
+  or speaker + headphones), which starts at <strong>−18 dB</strong>. A first plug never
+  delivers the speaker's level to someone's ears.</li>
+<li>Kept to 0.1 dB, <code>"muted"</code> for mute.</li>
+</ul>
+<h2 id="who-applies-it">Who applies it</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>The SDK (default)</th>
+<th>The app (<code>Settings::appVolume</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The app's mix</td>
+<td>nominal, at 0 dB</td>
+<td>already has <code>volumeGain()</code> in it</td>
+</tr>
+<tr>
+<td>Where</td>
+<td><code>AudioOut</code>, after the render function and before the conversion, so the meter and the over count see what the device gets</td>
+<td>wherever the app puts it</td>
+</tr>
+<tr>
+<td>A change of volume or endpoint</td>
+<td>ramped across one block</td>
+<td>the app's to smooth</td>
+</tr>
+<tr>
+<td>The exact path (<code>setExact</code>, MDFourier)</td>
+<td>not applied: a measurement signal is not turned down</td>
+<td>not applied</td>
+</tr>
+</tbody>
+</table></div>
+<p>Exactly one of the two applies it. The log says which, once, when the
+endpoint is found:</p>
+<pre><code>audio: volume of Speaker (RK3326-…/speaker): -6 dB, applied here (opened)
+</code></pre>
+<h2 id="the-api">The API</h2>
+<p><code>include/sndstation/volume.h</code>: <code>Endpoint</code> (the unit's key, the endpoint's
+name, a label), <code>of()</code>, <code>current()</code> (the endpoint a program would play on
+now, with no stream open), <code>load()</code>, <code>save()</code>, <code>step()</code>, <code>gain()</code>,
+<code>position()</code>, <code>text()</code>, and the constants.</p>
+<p>On <code>AudioOut</code>, for the endpoint its stream plays on:</p>
+<pre><code class="language-cpp">const volume::Endpoint&amp; endpoint() const;  // .name: &quot;speaker&quot;, &quot;usb:16c0:048a&quot;, …
+float volumeDb() const;                    // volume::MUTED when muted
+float volumeGain() const;                  // linear, 0 when muted; RT-safe (an atomic)
+float stepVolume(int dir);                 // Vol+ / Vol-: one step, saved at once
+void  setVolumeDb(float db);               // clamped, saved
+bool  refreshEndpoint();                   // decide again and apply (a plug, a change)
+</code></pre>
+<p><code>open()</code> finds the endpoint and reads its volume before the first callback,
+and on its card applies what playing it writes: the built-in card's route
+and speaker switch, then the endpoint's maximum. Only what differs is
+written. <code>service()</code> (or <code>followJack()</code> alone), every frame, follows a card
+coming and going, and a plug: that swaps the route and the volume only.</p>
+<h2 id="maximums">Maximums</h2>
+<p>Set in <strong>SYSTEM LEVELS</strong> (AUDIO, under LEVELS), by ear: with the test sound
+on, pings at <strong>full scale</strong>, 0 dBFS, play past the volume there; the card's
+playback levels are listed first, each with a bar and its dB. Raise them until
+it distorts, rattles or is too loud, and back off. A playback level moved
+is kept at once, all of them together, as the playing output's maximum. On
+headphones the pings stay at the volume. Nothing else sets a maximum: not
+an app, not the SDK, not the volume. A board's preset carries the maximum
+the team set for its speaker this same way, and the unit's own, once set,
+replaces it (<a href="audio-page.html#system-defaults-a-calibrated-boards-preset">audio-page.md</a>).</p>
+<p>Why full scale: the maximum is what a full-scale sample produces, the
+loudest any app can make the output. Judged at −12 dBFS, as the first
+version did, a full-scale app plays 12 dB louder than anything heard while
+setting it.</p>
+<p>Kept per level as <code>{ "control", "value", "range": [lo, hi] }</code>, the value in
+the card's own units. A maximum level is refused, and said, where the card
+no longer has the control, or reports another range than the one it was
+kept in: set it again.</p>
+<p>Applied by <code>AudioOut</code> when its stream opens, when the card changes and on
+<code>refreshEndpoint</code>, and at startup by <code>applyStartupMixer()</code>, after the
+levels kept by hand, so the maximum wins. Not on a headphone plug: that
+swaps the route and the volume, nothing else.</p>
+<p>An output with no maximum, its own or its board's preset's, has none, and
+nothing is written on its behalf: its levels stay where the card has them.</p>
+<h2 id="who-uses-which">Who uses which</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Launcher</strong></td>
+<td>Vol± on every page but CONTROLS step the volume of the output a program would play on (<code>volume::current()</code>), with an overlay saying which and how loud. With the launcher's stream playing (every page, <code>launcher/audio.h</code>), they step that stream's volume, heard at once.</td>
+</tr>
+<tr>
+<td><strong>AUDIO page</strong></td>
+<td>the playing output's volume (User level) on the main list, and every output's on its own page; its maximum in SYSTEM LEVELS. Its test sound plays at the volume (as loud as an app at this volume); SYSTEM LEVELS (but not on headphones) and the set-up by ear play past it.</td>
+</tr>
+<tr>
+<td><strong>An app with a volume of its own</strong></td>
+<td>applies <code>volumeGain()</code> itself (<code>appVolume</code>) where its own gain was, if it must come before something of its own, else leaves it to <code>AudioOut</code>; steps it with <code>stepVolume()</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="calibration-signals-what-is-safe-where">Calibration signals: what is safe where</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Speaker</th>
+<th>Headphones, line out</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pings at full scale, with gaps (the test sound, at the volume; past it in SYSTEM LEVELS)</td>
+<td>raise the levels with care</td>
+<td>at the volume only; not on anyone's ears until it is down</td>
+</tr>
+<tr>
+<td>Sparse bursts at full scale</td>
+<td>a quarter of the heat</td>
+<td>as above</td>
+</tr>
+<tr>
+<td>Beeps at −18 dBFS, 20% of the time (the set-up by ear)</td>
+<td>safe to leave running at a working gain</td>
+<td>safe</td>
+</tr>
+<tr>
+<td>Steady sine at −12 dBFS (the steady tone)</td>
+<td>warms the voice coil; not to be left on</td>
+<td>safe at modest gain</td>
+</tr>
+<tr>
+<td>MDFourier (AUDIO's TOOLS)</td>
+<td>refused</td>
+<td>the measurement: one recording, analyzed on a desk (<a href="audio-device.html">audio-device.md §2.4</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="power">Power</h2>
+<p>The split of gain between hardware and software does not change the
+battery: the same loudness is the same power, whichever stage made it.
+What does: closing the stream when nothing sounds, larger buffers when not
+performing, and powering the unused output down (the route and the speaker
+switch). Expectations, not measurements.</p>
+<h2 id="open-questions">Open questions</h2>
+<ol>
+<li><strong>Hiss at the lowest volumes</strong> on sensitive headphones, with the
+   hardware at the maximum: measure before putting hardware steps under the
+   software volume while silent.</li>
+<li><strong>A calibration mode</strong> that steps a level between MDFourier runs and
+   logs which step was where, to find a maximum by measurement.</li>
+<li><strong>USB interfaces</strong>: their own playback level kept as a maximum, in place
+   of the raise from 0% (<code>raiseUsbVolumeOnce</code>)?</li>
+<li><strong>A quiet timeout</strong>, closing the stream after a while of silence.</li>
+<li><strong>The overlay</strong>: drawn by the SDK, so every app looks the same?</li>
+<li><strong>Programs outside the SDK</strong> get the maximum (it is in the mixer) but
+   not the software volume. Deferred: they follow the SDK for now.</li>
+</ol>
+    <p class="foot">From <code>docs/audio-levels.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

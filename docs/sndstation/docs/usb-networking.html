@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>USB networking · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html" aria-current="page">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="usb-networking">USB networking</h1>
+<p><strong>Part of the sndstation design.</strong> Built and shipping: <code>tools/sndstation-netctl</code>
+(<code>usb-*</code> commands), the launcher's SETTINGS → Network → USB networking page
+(<code>launcher/settings.cpp</code>, <code>launcher/netctl.cpp</code>), and
+<code>system/sndstation-usbnet.service</code>. The page's own behavior is in
+<a href="launcher.html#usb-networking">launcher.md</a>; this is how the whole thing works.</p>
+<h2 id="what-it-is-for">What it is for</h2>
+<p>A network over a USB cable, with no Wi-Fi: a unit and the computer it is
+plugged into, or several units on one USB hub. On a hub, one unit is the
+host and the others plug into it, directly or through the hub. Units on it
+reach each other at fixed or handed-out addresses, so an app on one can talk
+to an app on another (ssh, a game's TCP connection, anything IP).</p>
+<h2 id="the-three-modes">The three modes</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>The unit is</th>
+<th>Its address</th>
+<th>Hands out addresses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connected to my PC</td>
+<td>a USB Ethernet device</td>
+<td><code>10.55.0.1</code></td>
+<td>to the computer</td>
+</tr>
+<tr>
+<td>Connected to a hub</td>
+<td>a USB Ethernet device</td>
+<td>from the host, <code>10.56.0.x</code></td>
+<td>no, it asks</td>
+</tr>
+<tr>
+<td>As a host</td>
+<td>a USB host with a bridge</td>
+<td><code>10.56.0.1</code></td>
+<td><code>10.56.0.10</code>–<code>254</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Picking a mode turns off whichever was on first. Every unit starts <strong>off</strong>
+after a power-on unless <strong>Remember network settings</strong> is on.</p>
+<p><strong>No mode hands out a route or DNS.</strong> Each one reaches the others; nobody's
+own traffic goes through a unit. A wired default route outranks Wi-Fi, so
+one handed out here would quietly take over a laptop's internet. Hub mode
+refuses a route and DNS from whatever answers it, for the same reason.</p>
+<h3 id="connected-to-my-pc">Connected to my PC</h3>
+<p>The port becomes a USB Ethernet gadget with one CDC NCM function (Windows 10
+and later, macOS and Linux drive it with no extra driver; CDC ECM on a kernel
+without NCM). NetworkManager's shared mode runs dnsmasq and gives the
+computer an address. Without dnsmasq in the image, give the computer
+<code>10.55.0.2/24</code> by hand. <code>ssh sst@10.55.0.1</code> reaches the unit once SSH is on.</p>
+<h3 id="connected-to-a-hub">Connected to a hub</h3>
+<p>The same gadget, but the unit asks for an address and keeps asking: with no
+cable in yet, with no host answering, after an unplug, after the host
+restarts. The page says it is waiting until a host answers. Its gadget MACs
+come from the unit's <code>/etc/machine-id</code> (host side <code>02:…</code>, device side
+<code>06:…</code>), the same every time and different on every unit, so several units
+on one hub never collide. Release images ship an empty machine-id, so each
+card makes its own at first boot.</p>
+<h3 id="as-a-host">As a host</h3>
+<p>The port is a USB host. A bridge, <code>br-usb</code>, takes in every USB Ethernet link
+that appears on it (drivers <code>cdc_ether</code>, <code>cdc_ncm</code>, <code>rndis_host</code>), including
+ones already plugged in when host mode starts, and hands out addresses. The
+page counts the links on the bridge as <em>joined</em>.</p>
+<p><strong>Any</strong> USB Ethernet joins, not only other units: a USB Ethernet adapter, a
+phone's USB tethering, or a unit left in "connected to my PC". While host mode
+is on, an adapter on this unit is part of the bridge, not a network of its
+own.</p>
+<h2 id="remembering">Remembering</h2>
+<p><strong>Remember network settings</strong> is off until the user turns it on. While it is
+on, the mode in use comes back at boot: <code>sndstation-usbnet.service</code> (a
+oneshot after NetworkManager) runs <code>sndstation-netctl usb-boot</code>, which reads
+<code>/etc/sndstation/usb-network</code> and sets that mode. Changing mode while
+remembering updates it; turning it on while off remembers <em>off</em>. A remembered
+mode the unit can no longer do is left off, and the reason goes to the
+journal. Wi-Fi and SSH are not part of it: NetworkManager already keeps Wi-Fi
+networks, and SSH stays on through restarts on its own.</p>
+<h2 id="which-units-can-do-which-mode">Which units can do which mode</h2>
+<ul>
+<li><strong>The device modes</strong> (PC, hub) need a port with a device mode: a UDC under
+  <code>/sys/class/udc</code>, or a USB role switch under <code>/sys/class/usb_role</code> that can
+  make one, and the kernel's <code>libcomposite</code>.</li>
+<li><strong>Host mode</strong> needs a USB host controller with a port of its own beside the
+  UDC's (H700 units have a separate host-only EHCI port), or a role switch.</li>
+<li><strong>One UDC takes one gadget.</strong> If another gadget already holds it (a boot
+  service from outside sndstation, say), the device modes are not offered and
+  the page says "The USB port is in use by another USB gadget (<em>name</em>)".</li>
+</ul>
+<p>The page lists only what the unit can do, and says why for the rest.</p>
+<p><strong>Role switches (RK3326).</strong> The port is told to be a device for the device
+modes and a host for host mode, and put back as it was afterward. A device
+port is no host: a USB Wi-Fi or Ethernet adapter on it stops working, and the
+page says so. Host mode refuses on a role-switch port while another gadget
+holds it.</p>
+<p><strong>RK3326 cards need a device-tree overlay.</strong> The harvested RK3326 device trees
+(all but the GKD Pixel 2's) leave the USB PHY's OTG port disabled, so the
+device modes bind but nothing reaches the cable. The fix is an overlay that
+sets <code>/syscon@ff2c0000/usb2phy@100/otg-port</code> to <code>okay</code>, applied from the
+card's <code>config.txt</code> (<code>overlays=</code>). It belongs to the card image, not to this
+package.</p>
+<h2 id="underneath">Underneath</h2>
+<p>Everything runs through the root helper, as the launcher is never root:</p>
+<pre><code>sndstation-netctl usb-status                 the usb section of `status`, alone
+sndstation-netctl usb-mode off|pc|hub|host   usb-on and usb-off are pc and off
+sndstation-netctl usb-remember on|off
+sndstation-netctl usb-boot                   the remembered mode, at boot
+</code></pre>
+<p><code>usb-status</code> (and the <code>usb</code> section of <code>status</code>) says:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>supported</code>, <code>why</code></td>
+<td>the device modes, and why not</td>
+</tr>
+<tr>
+<td><code>host</code>, <code>hostwhy</code></td>
+<td>host mode, and why not</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td><code>off</code>, <code>pc</code>, <code>hub</code>, <code>host</code></td>
+</tr>
+<tr>
+<td><code>active</code>, <code>ip</code></td>
+<td>on, and the unit's address (empty while a hub waits)</td>
+</tr>
+<tr>
+<td><code>joined</code></td>
+<td>host mode: links on the bridge</td>
+</tr>
+<tr>
+<td><code>remember</code></td>
+<td><code>yes</code> or <code>no</code></td>
+</tr>
+<tr>
+<td><code>role=switch</code></td>
+<td>the port has a role switch</td>
+</tr>
+</tbody>
+</table></div>
+<p>What it makes:</p>
+<ul>
+<li>the gadget: configfs <code>/sys/kernel/config/usb_gadget/sndstation</code></li>
+<li>NetworkManager connections, all made with <code>save no</code>, so none outlives a
+  restart: <code>sndstation-usb</code> (PC and hub), and for host mode the bridge
+  <code>sndstation-usbhost</code> and its port profile <code>sndstation-usbhost-port</code>
+  (<code>match.driver</code>, <code>multi-connect multiple</code>)</li>
+<li>dnsmasq's drop-in <code>/etc/NetworkManager/dnsmasq-shared.d/sndstation-usb.conf</code>
+  (<code>dhcp-option=3</code>, <code>dhcp-option=6</code>: no router, no DNS) in PC and host mode</li>
+<li><code>/run/sndstation-usb-mode</code> (the mode in use) and
+  <code>/run/sndstation-usb-role</code> (a role switch's old role)</li>
+<li><code>/etc/sndstation/usb-network</code> while remembering, removed on purge</li>
+</ul>
+<p><strong>NetworkManager leaves USB gadget interfaces unmanaged</strong> (its udev rule
+expects whoever made the gadget to set it up). PC mode activates its
+connection explicitly. Hub mode also sets the device managed and makes its
+connection autoconnect, so it comes up whenever a host answers.</p>
+<h2 id="when-it-does-not-come-up">When it does not come up</h2>
+<ul>
+<li><strong>Nothing on the host side at all</strong> (<code>lsusb</code> shows nothing, the hub's port
+  reads <code>not attached</code> in <code>/sys/bus/usb/devices/&lt;hub&gt;/&lt;hub&gt;-port*/state</code>):
+  the cable or the port, or, on RK3326, the overlay above.</li>
+<li><strong>The link is there but no address:</strong> ping every IPv6 node on it,
+  <code>ping -6 ff02::1%br-usb</code> on the host, to see who is on it with no IPv4 at
+  all, then ssh to the answer.</li>
+<li><strong>Who has joined, by name:</strong> <code>ip link show master br-usb</code>, and the leases
+  in <code>/var/lib/NetworkManager/dnsmasq-br-usb.leases</code>.</li>
+</ul>
+<h2 id="not-done">Not done</h2>
+<ul>
+<li>Routing a hub's units out to the internet through the host (shared mode's
+  NAT rules also need nftables expressions these kernels lack).</li>
+<li>Showing an address on the page for a gadget the launcher did not make.</li>
+</ul>
+    <p class="foot">From <code>docs/usb-networking.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Software packages · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html" aria-current="page">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="software-packages">Software packages</h1>
+<p>SETTINGS → Software packages is everything the unit installs, through apt:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>UPDATES</strong></td>
+<td>the unit's updates, the system's, sndstation's and the vendors': <code>apt-get update</code>, then what <code>apt upgrade</code> does, shown whole (below). Its row names the sources they come from: <em>Includes: Debian, Debian-Security, sndstation, Sound Works</em>.</td>
+</tr>
+<tr>
+<td><strong>SNDSTATION</strong></td>
+<td>the sndstation source's packages: apps, plugins, sounds, skins. Its row says how many are installed, how many more are available, and <em>UPDATES AVAILABLE</em> when one of those installed has a newer version. A gets or updates one; Y removes one.</td>
+</tr>
+<tr>
+<td><strong>VENDORS</strong></td>
+<td>one row, however many vendors the unit has: their names, how many of their packages are installed and how many more are available, <em>UPDATES AVAILABLE</em> when one of them has a newer version of something installed, and in red any that did not answer. A opens their list, a page of its own: each vendor, with a tile of its own color, its row as sndstation's, and in red with apt's reason when it did not answer. There, A lists a vendor's packages: demos and free ones. Nothing is asked: a vendor is trusted by being in the <code>sndstation-vendors</code> package (below). Y removes a vendor from the unit, after a card that says what stays; its row then says <em>removed</em>, and A on it adds it back. B on a vendor's packages goes back to the list. A list longer than the page follows the selection, and says which of how many it is on.</td>
+</tr>
+<tr>
+<td><strong>FROM FILES</strong></td>
+<td><em>Install a .deb file</em>: a full version, bought from a vendor, from a card or a stick; shown first, installed on A. And the packages installed that way, to remove. A <code>.deb</code> opened in STORAGE's files comes here too.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Opening the page asks every source</strong> before it shows a count: <code>apt-get
+update</code> for every source apt has, whether each vendor whose source is not
+written yet answers (<code>ping</code>, below), then what each source has against what is
+installed, and what an upgrade would take. Until then the page is grey
+and only B works, with how many sources have answered and for how long.
+X (<em>rescan all</em>) asks again. That look is the UPDATES page's too, so
+opening it does not ask every source a second time.</p>
+<p><strong>Offline, nothing is asked.</strong> Whether the unit is online is NETWORK's
+answer (Wi-Fi joined, or a wired link up with an address; USB to a PC is
+not one), read every 30 seconds. Offline, the page shows what is
+installed, from the unit's own lists, and is not gray: Y removes a
+package. Getting, updating, <em>Get all</em> and setting up a vendor whose source
+is not written yet say "Offline: connect in NETWORK first". The background check and the
+UPDATES page's own check are skipped too.</p>
+<p><strong>Not known yet is not online.</strong> Just after the launcher starts, NETWORK
+has not read the unit's status yet. Until it has, the page is as it is
+offline: what is installed, removable, and nothing asked. Once NETWORK
+says the unit is online, the sources are asked, and they are too when
+the unit comes online while the page is open, without X. The background
+check waits for NETWORK to say the unit is online.</p>
+<p><strong>"Up to date" only after every source answered.</strong> SETTINGS' row, the
+UPDATES row here and the UPDATES page say <em>up to date</em> only when the last
+check reached every source apt has. Otherwise they say how many updates
+the unit's lists know of ("· offline" after it while offline), <em>offline</em>,
+or how many sources did not answer.</p>
+<p>In a source's list, an installed package is in the style's <code>ok</code> color
+and one not installed is gray; one with an update shows both versions,
+the installed one and then its source's, in <code>note</code> (docs/sdk-style.md,
+state colors). A gets a package or updates that one alone; Y removes an
+installed one, with an update pending or not. A never removes.</p>
+<p><strong>Leaving the page after anything was installed, removed or upgraded</strong>
+walks the plugin folders, as the launcher does at start: a CLAP plugin a
+package brought is checked and reported, and one it took is gone from
+PLUGINS, and from what every app reads. APPS is read again too, as it is
+the moment each install ends.</p>
+<p>Every update is listed with where it comes from, from which version to
+which, and how big it is; while anything installs, apt's own progress and
+log are on screen. Nothing is installed unless someone asks.</p>
+<h2 id="where-packages-come-from">Where packages come from</h2>
+<ul>
+<li><strong>Debian</strong> (or the unit's base system): its updates only, in UPDATES.</li>
+<li><strong>sndstation</strong>, <code>https://sndstation.s3.us-west-1.amazonaws.com</code>, suite
+  <code>stable</code>: the platform's own updates, and its extra packages, free. The
+  sndstation package ships the source
+  (<code>/etc/apt/sources.list.d/sndstation.sources</code>, a conffile) and the key
+  it is signed with (<code>/usr/share/keyrings/sndstation-archive-keyring.asc</code>);
+  a package built without that key (<code>packaging/sndstation-archive-keyring.asc</code>)
+  ships no source at all, as an unsigned one would fail every check.</li>
+<li><strong>Vendors</strong>: instrument and effect makers, each with its own signed
+  source, which carries <strong>demos and free products only</strong>. A vendor in the
+  <code>sndstation-vendors</code> package is trusted: its source is written when that
+  package is installed, and the unit does not ask.</li>
+<li><strong>Files</strong>: a full, registered product is never in a source. It is a
+  <code>.deb</code> the buyer gets from the vendor, and installs from wherever they
+  put it.</li>
+</ul>
+<h2 id="vendors">Vendors</h2>
+<p>A unit's vendors are files in <code>/usr/share/sndstation/vendors</code>,
+put there by a package (the platform names none itself):</p>
+<pre><code># /usr/share/sndstation/vendors/soundworks.vendor
+Name: Sound Works
+About: Instruments and effects: demos and free ones
+URIs: https://apt.soundworks.example/debian
+Suites: stable
+Components: main
+</code></pre>
+<p>A flat repository (one directory with no <code>dists/</code>, as on a GitHub
+release) names the suite <code>./</code> and no <code>Components</code>.</p>
+<p>Beside it is the public key its source is signed with,
+<code>soundworks.asc</code> (armored) or <code>soundworks.gpg</code>. Turning one on
+(<code>sndstation-updates vendor-on soundworks</code>) writes its source,
+<code>/etc/apt/sources.list.d/sndstation-vendor-soundworks.sources</code>, signed by
+that key, and pins it below the system's
+(<code>/etc/apt/preferences.d/sndstation-vendor-soundworks.pref</code>, priority 100,
+by its host):</p>
+<ul>
+<li>a package only the vendor has installs and updates from it as from any
+  source;</li>
+<li>a package the system or sndstation also has never comes from it, at any
+  version: a vendor's source adds packages, it never replaces one.</li>
+</ul>
+<p><code>vendor-off</code> removes both files, and notes the vendor's id in
+<code>/etc/sndstation/vendors-off</code>. What the vendor installed stays, and gets
+no more updates; removing it is the package list's.</p>
+<p><strong>Being in the package is what makes a vendor trusted.</strong> The project vets
+a vendor before its definition goes in, and the package's install script
+turns on every vendor it holds. The page has no trust step. What this
+means for a unit:</p>
+<ul>
+<li>every vendor's source is asked on each check for updates, so a vendor
+  whose server is down shows as <em>did not answer</em>, in red, until it is back;</li>
+<li>nothing of a vendor's is installed until a user gets it from its list:
+  a source adds packages to choose from, and updates what was chosen;</li>
+<li>the pin (above) still holds: a vendor never replaces a package of the
+  system's or sndstation's.</li>
+</ul>
+<p><strong>Removing a vendor is the owner's.</strong> Y on a vendor's row asks first, then
+runs <code>vendor-off</code>: its packages are no longer listed or updated, what it
+installed stays, and its server is no longer asked, not even whether it
+answers. Y works on a vendor that is <em>not set up yet</em> too, so the package
+does not turn it on later. The vendor stays removed through every upgrade of
+<code>sndstation-vendors</code>, until A on its row (<code>vendor-on</code>) adds it back, with
+no question. Removing works offline; adding back fetches the vendor's
+lists, so it waits for a network.</p>
+<p><strong>The definitions reach a unit with their package</strong>, <code>sndstation-vendors</code>,
+and so do their changes, with nobody editing a file. The platform builds
+it: <code>packaging/make-vendors-deb.sh</code>, which <code>packaging/make-deb.sh</code> runs,
+from <code>packaging/vendors/</code> (its README says what a definition holds) and
+from any directory a build passes with <code>--vendors DIR</code>, for vendors an
+app, an image or a distribution offers that the platform does not. An id
+defined twice stops the build; a vendor with no source or no key yet is
+left out, and said.</p>
+<ul>
+<li>its version moves with the vendors: the platform's revision, or the last
+  change to a vendors directory when that is later, so apt takes a new
+  definition (a vendor's <code>beta</code>) as an upgrade;</li>
+<li>installing or upgrading it writes the source of <strong>every vendor it
+  holds</strong> from the definition it brings (its <code>postinst</code> runs
+  <code>sndstation-updates vendor-on ID</code> for each), and removes the source of a
+  vendor it no longer holds, whose key went with its definition, when the
+  helper wrote that source. A file under that name that someone wrote by
+  hand, for a vendor the package never held, is left alone. A vendor
+  the owner removed (its id is in <code>/etc/sndstation/vendors-off</code>) is left
+  removed. A source edited by hand is replaced then, and only then;</li>
+<li>removing it removes the source and pin of every vendor it held (its
+  <code>postrm</code>), and nothing it did not write. What
+  the vendors installed stays, and so does the list of vendors the owner
+  removed, unless the package is purged;</li>
+<li>a unit whose <code>sndstation-vendors</code> is 0.16.1 or earlier has sources only
+  for the vendors that were trusted on it. There, A on a vendor's row
+  writes its source, asking nothing, and then lists its packages; its row
+  says <em>not set up yet</em> until then;</li>
+<li>a source the package wrote during an upgrade has no lists yet. Back from
+  the UPDATES page, the page sees a vendor that is on and was not at its
+  last look, and asks every source again before it shows a count.</li>
+</ul>
+<h2 id="packages-for-vendors-and-for-sndstation">Packages, for vendors and for sndstation</h2>
+<p><strong>Everything</strong> the sndstation source and each vendor's has is
+listed, in every component its source file names (a vendor's <code>beta</code> with
+its <code>main</code>), apart from the platform itself
+(<code>sndstation</code>, <code>sndstation-vendors</code>), which updates with the system. A
+package can say what it is, in a field of its own, which the page shows:</p>
+<pre><code>XB-Sndstation-Kind: clap-plugin       (in debian/control; app, clap-plugin, sounds or skin)
+</code></pre>
+<p>which is <code>Sndstation-Kind: clap-plugin</code> in the <code>.deb</code> and in the source's
+index; one without it is listed as a <em>package</em>. Installing one through the
+page installs <strong>the version its source has</strong> (<code>apt-get install
+NAME=VERSION</code>), never the system's package of the same name, and removing
+one never takes a package of the system's or the platform itself with it.
+A <code>.deb</code> file is installed through the page only with the field (below).</p>
+<p><strong>Get all</strong>: START on a source's list gets every package of it not
+installed yet (a demo whose full version is installed is not one), after
+one card that names them and what they download. They install one after
+the other, each its own helper call, checked against its source as one
+installed alone is; the first that fails stops it there, and the page says
+which and how many were got before it.</p>
+<p><strong>One install after another, at once</strong>: after every install the page reads
+what updates are pending again, from apt's state with no lock, and an
+install started meanwhile runs beside it rather than waiting; the list is
+read once more after it. Only a check of the sources, an upgrade or a
+repair holds an install back, and the page says so.</p>
+<p><strong>A demo and its full version</strong> are two packages, so that an update of the
+demo can never take the full one's place:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>in the vendor's source</th>
+<th>as a file, for the buyer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>name</td>
+<td><code>soundworks-piano</code></td>
+<td><code>soundworks-piano-full</code></td>
+</tr>
+<tr>
+<td>control</td>
+<td><code>Sndstation-Kind: clap-plugin</code></td>
+<td><code>Sndstation-Kind: clap-plugin</code>, <code>Provides: soundworks-piano</code>, <code>Conflicts: soundworks-piano</code>, <code>Replaces: soundworks-piano</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Installing the full one removes the demo (it conflicts with it, and
+replaces its files). Its <code>Provides</code> keeps everything that depended on the
+demo satisfied, and the page shows the demo as <em>full version installed</em>,
+with nothing to get. The full version's own updates come as new files, from
+the vendor.</p>
+<p>Removing one never takes anything of the system's with it: the helper
+refuses when apt would also remove a package that is not one of the
+platform's, and says which. A package's dependencies stay installed after
+it is removed (<code>apt autoremove</code>, from a shell, clears them).</p>
+<h2 id="a-deb-file">A .deb file</h2>
+<p><em>Install a .deb file</em> opens the file browser on <code>.deb</code> files. Picking one
+shows what it is before anything installs (<code>dpkg-deb -f</code>): its name,
+version, kind, maker, what it replaces, its size, what it needs, and its
+description; and, when it is already installed, which version. Then:</p>
+<ul>
+<li><strong>refused</strong>: not one of the platform's (no <code>Sndstation-Kind</code>), or built
+  for another architecture;</li>
+<li>otherwise A installs it, with <code>apt-get install /path/to/file.deb</code>, so
+  what it needs comes from the sources.</li>
+</ul>
+<p>A package's scripts run as root, like the system's own: the card says so,
+and says to install only a file from a vendor you trust.</p>
+<h2 id="publishing-a-source">Publishing a source</h2>
+<p><code>tools/apt-repo.sh</code>, on the publisher's own machine (the signing key stays
+there; nothing publishes from CI):</p>
+<pre><code class="language-sh">export REPO_KEY=you@example.org         # the gpg key that signs it
+tools/apt-repo.sh add  ~/apt/sndstation dist/*.deb
+tools/apt-repo.sh upload ~/apt/sndstation s3://sndstation
+tools/apt-repo.sh key  ~/apt/sndstation &gt; packaging/sndstation-archive-keyring.asc
+</code></pre>
+<p><code>add</code> puts packages in the pool (a version is never replaced, only added)
+and writes and signs the index (<code>InRelease</code>, <code>Release.gpg</code>) for arm64,
+armhf and amd64; <code>upload</code> copies the pool, then the index, with the index
+never cached. <code>REPO_LABEL</code> (default <code>sndstation</code>) is the label UPDATES
+groups by. A vendor runs the same with its own key, label and bucket.</p>
+<p><strong>On S3</strong>, a unit reads the source over plain HTTPS, so <code>dists/*</code> and
+<code>pool/*</code> must be readable by anyone. A new bucket blocks that (<em>Block
+public access</em>): turn off the two settings about bucket policies (the ACL
+ones can stay on), then give it a policy that allows reading those two
+folders and nothing else:</p>
+<pre><code class="language-json">{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;AptRead&quot;,
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: &quot;*&quot;,
+    &quot;Action&quot;: &quot;s3:GetObject&quot;,
+    &quot;Resource&quot;: [&quot;arn:aws:s3:::sndstation/dists/*&quot;, &quot;arn:aws:s3:::sndstation/pool/*&quot;]
+  }]
+}
+</code></pre>
+<p><code>curl -I https://sndstation.s3.us-west-1.amazonaws.com/dists/stable/InRelease</code>
+then answers 200 (or 404 before the first upload), not 403.</p>
+<p><strong>On GitHub</strong>, a source can be served from GitHub Pages the same way (the
+directory <code>apt-repo.sh</code> writes, pushed to the Pages branch). A release's
+assets cannot: apt needs the <code>dists/</code> and <code>pool/</code> paths as they are.</p>
+<h2 id="the-updates">The updates</h2>
+<h2 id="how-others-do-it-and-why-this-follows-the-command-line">How others do it, and why this follows the command line</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>What it shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ubuntu</strong> (Software Updater)</td>
+<td>a total and an Install button; packages, versions and changelogs behind "Details". Security updates also install in the background by themselves (<code>unattended-upgrades</code>), and some updates are <em>phased</em>, reaching a unit days after others. The least shown.</td>
+</tr>
+<tr>
+<td><strong>Debian</strong> desktops (GNOME Software, KDE Discover)</td>
+<td>one "OS updates" block, downloaded in the background and installed on the next restart. Synaptic and <code>apt</code> for the detail.</td>
+</tr>
+<tr>
+<td><strong>Linux Mint</strong> (Update Manager)</td>
+<td>every package: its type (security, kernel), old and new version, size, source, description and changelog; packages can be ignored for good; a snapshot is suggested first; nothing automatic unless asked. The most shown.</td>
+</tr>
+<tr>
+<td><strong>Raspberry Pi OS</strong></td>
+<td>a list of packages from a panel icon, then an install.</td>
+</tr>
+<tr>
+<td><strong>Handheld images</strong></td>
+<td>often their own update scripts, and a warning against <code>apt upgrade</code>: it can replace the kernel, the device tree and the GPU's blobs the image depends on.</td>
+</tr>
+</tbody>
+</table></div>
+<p>This page takes Mint's openness on the command line's own path: it is
+<code>apt-get</code> underneath, with nothing in between that decides on the user's
+behalf. Its safeguards are the handheld's (below), not hidden choices.</p>
+<h2 id="the-page">The page</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>the list</strong></td>
+<td>the updates, grouped by where they come from (below), each with its versions, size, one-line description and tags: <em>security</em>, <em>new</em> (another update needs it), <em>held</em>, <em>restart</em>. The header says when it was checked and how many sources answered. A: a package; START: install; Y: hold or release it; X: check again; SELECT: the sources.</td>
+</tr>
+<tr>
+<td><strong>a package</strong></td>
+<td>its versions, source, sizes, what its tags mean, and its changelog (<code>apt-get changelog</code>, fetched from its source).</td>
+</tr>
+<tr>
+<td><strong>sources</strong></td>
+<td>each apt source and whether the last check reached it, apt's warnings, and its whole output.</td>
+</tr>
+<tr>
+<td><strong>confirm</strong></td>
+<td>how many packages, what they fetch, from which sources; what stays (held, kept back); Y to take the kept-back ones too, which is a full upgrade and names everything it would <strong>remove</strong>. Refused on a battery under 30% that is not charging.</td>
+</tr>
+<tr>
+<td><strong>installing</strong></td>
+<td>one bar (downloading its first half, installing its second), the step at hand ("Unpacking openssl"), and as many of apt's latest lines as the screen has room for; Y shows apt's log whole. It cannot be left or stopped: dpkg cut off halfway is how a system stops starting.</td>
+</tr>
+<tr>
+<td><strong>done</strong></td>
+<td>what it came to: a restart needed, a configuration file someone changed whose new version was set aside, a package dpkg could not finish (A repairs it), the log.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="groups">Groups</h3>
+<ol>
+<li><strong>Security</strong>: anything from a <code>-security</code> suite or a source labeled
+   so.</li>
+<li><strong>Each supplemental source</strong>, under its own name, in the order
+   <code>config/updates.json</code> gives (<code>sources</code>): sndstation's, an instrument
+   maker's, a trusted developer's.</li>
+<li><strong>Any other source</strong>, by the label apt gives it.</li>
+<li><strong>System</strong>: the base system's sources (<code>system</code> in <code>updates.json</code>).</li>
+<li><strong>Kept back</strong>: what <code>apt-get upgrade</code> leaves, because it needs a package
+   added or removed (a full upgrade takes it), or because it is held.</li>
+</ol>
+<p>A source is named by the <code>Label</code> of its <code>Release</code> file, as
+<code>apt-get -s upgrade</code> prints it before the colon (<code>Debian-Security:12/stable-security</code>).</p>
+<h2 id="on-the-system-side">On the system side</h2>
+<p><code>/usr/lib/sndstation/sndstation-updates</code> (<code>tools/sndstation-updates</code>), run
+through <code>sudo -n</code> by the same sudo rule as Network's and Storage's:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Does</th>
+<th>As</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>refresh</code></td>
+<td><code>apt-get update</code>, each source and how it went, and what each that answered calls itself (its Release file's <code>Label</code>, else <code>Origin</code>)</td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td><code>apt-get -s upgrade --with-new-pkgs</code> and <code>-s dist-upgrade</code> (simulations), <code>apt-mark showhold</code>, <code>apt-cache show</code> for sizes and descriptions</td>
+<td>the user</td>
+</tr>
+<tr>
+<td><code>upgrade [full]</code></td>
+<td><code>apt-get upgrade --with-new-pkgs</code> (what <code>apt upgrade</code> does: may install new packages, never removes one), or with <code>full</code> <code>apt-get dist-upgrade</code></td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>repair</code></td>
+<td><code>dpkg --configure -a</code>, then <code>apt-get -f install</code></td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>changelog PKG</code></td>
+<td><code>apt-get changelog PKG</code></td>
+<td>the user</td>
+</tr>
+<tr>
+<td><code>hold PKG</code>, <code>unhold PKG</code></td>
+<td><code>apt-mark hold</code>/<code>unhold</code></td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>holds-default</code></td>
+<td>holds the kernel, the device tree and the boot loader, once</td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>available</code></td>
+<td>the sndstation source and each vendor (on, off, or removed by the owner), and every package of those that are on, in every component (read from apt's lists), each with its kind (<code>Sndstation-Kind</code>, or none), its version, the one installed, and the installed package standing in for it (a full version's <code>Provides</code>); then those installed from files</td>
+<td>the user</td>
+</tr>
+<tr>
+<td><code>install PKG</code>, <code>remove PKG</code></td>
+<td><code>apt-get install NAME=VERSION</code> of a package one of those sources has, at its version there, or of one with a <code>Sndstation-Kind</code>; <code>apt-get remove</code> of one of those, never taking the system's or the platform with it</td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>inspect FILE</code></td>
+<td><code>dpkg-deb -f</code> on a <code>.deb</code>: its fields, and whether it may be installed</td>
+<td>the user</td>
+</tr>
+<tr>
+<td><code>install-file FILE</code></td>
+<td><code>apt-get install FILE</code>, when it is one of the platform's</td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>vendor-on ID</code>, <code>vendor-off ID</code></td>
+<td>write a vendor's source, pinned below the system's, or remove it. The <code>sndstation-vendors</code> package runs <code>vendor-on</code> for every vendor it holds; the page runs it for one whose source is not written yet, or to add one back. <code>vendor-off</code> first notes the id in <code>/etc/sndstation/vendors-off</code>, so the package leaves that vendor removed, and <code>vendor-on</code> takes it out again; it refuses an id that has neither a definition nor a source</td>
+<td>root</td>
+</tr>
+<tr>
+<td><code>ping</code></td>
+<td>whether each vendor whose source is not written yet answers: its <code>InRelease</code> (else <code>Release</code>) fetched with <code>apt-helper download-file</code> and thrown away, with the same 10-second limit; <code>refresh</code> asks the others, and one the owner removed is not asked at all</td>
+<td>the user</td>
+</tr>
+</tbody>
+</table></div>
+<p>A check says what it is doing while it runs, on the page and on the
+launcher's console: which step (holding the kernel, contacting the sources,
+reading what is installable), for how long, and each source as it answers.
+A source that does not answer gives up after 10 seconds, not retried
+(<code>Acquire::http(s)::Timeout</code>, <code>Acquire::Retries</code>), rather than apt's
+minutes: the next check tries it again. On the console:</p>
+<pre><code>updates: refresh (as root)
+updates:   ok   http://deb.debian.org/debian trixie
+updates:   FAIL https://apt.example.com stable
+updates: refresh: exit 4 in 11.3 s
+</code></pre>
+<p>It answers in lines (<code>updates 1</code>, then tab-separated records and
+<code>key=value</code>), so it can be run from a shell:
+<code>/usr/lib/sndstation/sndstation-updates list</code>. An install reports apt's
+progress through <code>APT::Status-Fd</code> as it comes, one <code>progress</code> record a
+step, and apt's log as <code>log</code> records; the page reads both live.</p>
+<p>Installing never asks a question, which on a handheld would hang it:
+<code>DEBIAN_FRONTEND=noninteractive</code>, and for a configuration file someone
+changed, <code>--force-confdef --force-confold</code>: theirs is kept and the
+package's new version is set aside as <code>.dpkg-dist</code>, which the page names.</p>
+<p>Nothing is installed for being recommended: every apt-get it runs has
+<code>APT::Install-Recommends=false</code>, <code>list</code>'s simulations too. A package's
+<code>Recommends</code> are mostly a desktop's (a file dialog's <code>zenity</code>, and the GTK
+under it); what a unit needs is a <code>Depends</code>.</p>
+<p>Security: what the launcher passes in is a package name or a vendor's id,
+checked against Debian's rules for a name before it reaches any command,
+or a <code>.deb</code> file's whole path, which <code>dpkg-deb</code> must read as a package that
+says it is one of the platform's. Installing a file is installing its
+scripts as root, which is the unit's owner's call: the sudo rule is a
+handheld's, whose user is its owner. Under sudo
+the environment is reset, so its test override is not honored there.</p>
+<h3 id="what-is-held-and-why">What is held, and why</h3>
+<p>The first check holds the installed packages matching <code>linux-image-*</code>,
+<code>linux-dtb-*</code>, <code>linux-u-boot-*</code> and <code>u-boot*</code>, once (a mark in
+<code>/var/lib/sndstation</code>), so a release later is not undone. On these units
+the kernel and device tree carry the audio routing and the display; a new
+one from the base system can lose either. A unit's own list, one glob a
+line, can be put at <code>/etc/sndstation/update-holds</code>. Holds are apt's own
+(<code>apt-mark</code>), so <code>apt upgrade</code> from a shell keeps them too. Y releases
+one.</p>
+<h2 id="the-background-check">The background check</h2>
+<p>While the launcher is on its own pages (nothing playing, no game), it
+checks at most every <code>check_hours</code> (24): <code>apt-get update</code>, then the list.
+SETTINGS then says "6 updates, 2 security". What it found is kept in
+<code>~/.config/sndstation/updates-state.json</code>, whether every source answered
+included, so the next start says it without checking again. Offline, it
+does not check.</p>
+<p>What is pending follows what is installed, without the network: the
+list (<code>apt-get -s upgrade</code>, from the lists apt already has) is read again
+after anything installed or removed here, at the first idle moment of
+each run, and whenever dpkg's database (<code>/var/lib/dpkg/status</code>) changes,
+an <code>apt upgrade</code> at a shell included. An update installed any way stops
+being offered at once, rather than at the next check. A check that fails (offline) is tried again after
+an hour. Opening the page checks, unless this run checked within the
+hour. <code>check_hours: 0</code> checks only when the page is opened.</p>
+<h2 id="supplemental-sources">Supplemental sources</h2>
+<p>The way Debian adds a source, unchanged: <code>/etc/apt/sources.list.d/&lt;name&gt;.sources</code>,
+with <code>Signed-By:</code> naming its key. sndstation's is shipped by its package;
+a vendor's is written when its package is installed (above). Each one's updates are
+named by the label its <code>Release</code> file gives, or by the name
+<code>updates.json</code> gives that label.</p>
+<h2 id="not-here">Not here</h2>
+<ul>
+<li><strong>Installing anything unasked</strong>, security updates included. A unit
+  mid-performance must not change under its player.</li>
+<li><strong>Restarting.</strong> The page says when an update needs one.</li>
+<li><strong>Phased updates</strong>: the page shows what apt would install, phasing and
+  all; a phased update is not listed until apt offers it.</li>
+<li><strong>Snapshots</strong> before an install (as Mint suggests): most units' file
+  systems cannot take one.</li>
+</ul>
+<h2 id="development">Development</h2>
+<p><code>sndstation --fake-updates</code> runs the page on made-up updates (a security
+update, a supplemental source's, a new package, a held kernel, one that
+only a full upgrade takes), installed slowly enough to watch; and on
+made-up packages: the sndstation source's, a vendor with its own, one
+whose source is not written and does not answer, a full version installed from a file, and <code>.deb</code> files (a path
+ending in <code>-full.deb</code> is one to install, any other is refused). The shots
+(<code>--shots</code>, 21h–21u) use it. The tests: <code>tests/test_updates.sh</code> runs the
+helper against stub <code>apt-get</code>, <code>apt-cache</code>, <code>apt-mark</code>, <code>dpkg</code>,
+<code>dpkg-query</code> and <code>dpkg-deb</code>, over a fake root with apt's lists and a
+vendor's files; <code>tests/test_updates.cpp</code> reads its output and drives both
+pages on the fake.</p>
+    <p class="foot">From <code>docs/updates.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

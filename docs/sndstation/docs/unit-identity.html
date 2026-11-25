@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Which unit this is · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html" aria-current="page">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="which-unit-this-is">Which unit this is</h1>
+<p><strong>Part of the sndstation design.</strong> Built and shipping:
+<code>include/sndstation/sysinfo.h</code>, <code>src/sysinfo.cpp</code> (<code>sysfacts::unitId()</code>, <code>sysfacts::socName()</code>),
+shown on the launcher's ABOUT, and the key
+<a href="audio-page.html#kept-audiojson-version-3"><code>audio.json</code></a> is written under.</p>
+<h2 id="the-problem">The problem</h2>
+<p>The device tree cannot answer "which console is this". Of seventeen units
+surveyed, <strong>seven report the same board model <em>and</em> the same <code>compatible</code></strong>
+— and they do not behave the same: five route audio cleanly, two play out
+of both outputs at once. A profile keyed on the DTB is shared between
+machines that disagree about the very thing being profiled.</p>
+<h2 id="the-soc-can-answer-it">The SoC can answer it</h2>
+<p>It was burned at manufacture and cannot change. RK3326 carries a package
+lot and a per-die block in OTP
+(<code>/sys/bus/nvmem/devices/rockchip-otp0/nvmem</code>), reverse-engineered across
+18+ retail handhelds — see <code>sndstation/src/rk3326_otp.h</code>, which is plgDavid's
+work and carries its own notes.</p>
+<p>It is a <strong>scan</strong>, in the shape the socket detection already uses on this
+project: try every door, report what each said, take the first that
+answered.</p>
+<ol>
+<li>The RK3326 decoder, so a family we understand yields a readable id.</li>
+<li>Then every <code>/sys/bus/nvmem/devices/*/nvmem</code> in turn, hashed — so a
+   family nobody has written a decoder for (an Allwinner SID, the next
+   clone) <strong>still produces a stable fingerprint with no new code</strong>.</li>
+</ol>
+<pre><code>SOC ID   RK3326-URKC08010-4FE23CAAD163F02F
+</code></pre>
+<p>A readable prefix and <strong>a hash of all 64 bytes</strong>. Deciding which fields
+matter is exactly the decision that cannot be made from a datasheet that
+documents none of this region, and a fingerprint ignoring the undecoded
+bytes cannot separate two chips differing only in them. The full hex goes
+into <code>audio.json</code> as <code>unit_raw</code>, beside the conclusion drawn from it, so
+the fingerprint can be recomputed differently later without the console.</p>
+<h2 id="one-row-on-the-panel-and-nothing-beside-it">One row on the panel, and nothing beside it</h2>
+<p>The line above the SOC ID already says "Rockchip RK3326", and the lot and
+the die bytes are both <em>inside</em> the hash — printing them as well is the
+same fact three times. Two consoles differ here visibly, which is the only
+thing a person needs from this line, and it is verbatim the key
+<code>audio.json</code> is written under, so it is also how you find this machine's
+entry in the file:</p>
+<pre><code>R40XX       RK3326-URKC08010-A599D7394C5B58B6
+R36S Blue   RK3326-URKC08010-4FE23CAAD163F02F
+</code></pre>
+<p>Same lot, different unit. The decode — package, revision, die block,
+leakage, performance, and any non-zero byte outside those — goes to the
+<strong>log</strong>, and the bytes themselves to <code>unit_raw</code>. Neither belongs on a panel
+where 48 of the 64 bytes are zero on every chip seen so far.</p>
+<h2 id="raspberry-pi-amlogic-mediatek-the-chips-own-number">Raspberry Pi, Amlogic, MediaTek: the chip's own number</h2>
+<p>These three families publish a serial, or a block the serial comes from,
+where a decoder can find it. Which family a unit is comes from the device
+tree's <code>compatible</code>, and its decoder runs after the RK3326 one and before
+the generic nvmem scan. The id is the chip and that number, both readable,
+nothing hashed when the number is already the chip's own:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Doors, in order</th>
+<th>Id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Raspberry Pi</td>
+<td>the firmware's <code>system/linux,serial</code> in the device tree (8 bytes, from OTP); the device tree's <code>serial-number</code>; <code>/proc/cpuinfo</code> Serial</td>
+<td><code>BCM2711-100000001A2B3C4D</code></td>
+</tr>
+<tr>
+<td>Amlogic</td>
+<td>the secure monitor's chip ID (<code>/sys/bus/platform/drivers/meson-sm/*/serial</code>); the soc bus's <code>serial_number</code>; the device tree's <code>serial-number</code>; a vendor kernel's <code>/proc/cpuinfo</code> Serial</td>
+<td><code>S922X-0A0B0C0D0E0F101112131415</code></td>
+</tr>
+<tr>
+<td>MediaTek</td>
+<td>the efuse (an nvmem device whose node is a <code>mediatek,…efuse</code>), hashed; LK's <code>chosen/atag,devinfo</code>, hashed; the soc bus's <code>serial_number</code>; the device tree's <code>serial-number</code>; <code>androidboot.serialno</code> on the command line</td>
+<td><code>MT8167-075C8ED50C0E3A03</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>A serial that is too short, one digit repeated or a bootloader's
+placeholder (<code>0123456789ABCDEF</code>) is refused, and the next door tried.</p>
+<p>A MediaTek kernel has to publish the efuse for the first door to find
+it: <code>CONFIG_NVMEM=y</code> and <code>CONFIG_NVMEM_MTK_EFUSE=y</code>. The PlayStation
+Classic's device tree has its efuse (<code>10009000.efuse</code>), but a kernel built
+without those has no driver bound to it and no <code>/sys/bus/nvmem</code> at all,
+and nothing else of the chip's own either: no soc bus, no devinfo, no
+serial on the command line. Its log then says "no identity source", door
+by door.</p>
+<p>The chip in the id is named from the device tree too: the last
+<code>compatible</code> is the SoC (<code>mediatek,mt8167</code> → MT8167; Allwinner's
+<code>sun50i-h700</code> → H700). Amlogic lists its package before the family
+(<code>amlogic,s922x</code>, <code>amlogic,g12b</code> → S922X, in G12B), and the kernel's soc bus,
+where a driver fills it in (<code>/sys/devices/soc0/soc_id</code>: "G12B (S922X)"),
+outranks the device tree. A Raspberry Pi's board revision code names its
+chip better than its device tree does, and is decoded into the log:
+<code>revision c03114: Pi 4B 1.4, 4 GB, Sony UK, BCM2711</code>.</p>
+<p>ABOUT's CPU row carries the same name, "MediaTek MT8167 · 4 cores", with
+the soc bus's revision when there is one: a mainline arm64 kernel has no
+"Hardware" line in <code>/proc/cpuinfo</code>, and left that row saying only how many
+cores. After the cores come the clock the CPU runs at now and the cpufreq
+governor choosing it ("1.25 GHz · performance"), the fastest cluster's on
+a chip with two.</p>
+<p>A unit of these families that had an id from the generic scan before has
+a new one now, and starts from nothing under it: what was saved under the
+old key is not looked for.</p>
+<p>The log lists every door, answered or not, after a <code>soc:</code> line:</p>
+<pre><code>soc: Broadcom BCM2711 — revision c03114: Pi 4B 1.4, 4 GB, Sony UK, BCM2711
+unit: BCM2711-100000001A2B3C4D  (rpi-serial)
+unit:   [no ] /sys/bus/nvmem/devices/rockchip-otp0/nvmem  cannot open (root only?)
+unit:   [yes] /proc/device-tree/system/linux,serial      serial 100000001a2b3c4d
+</code></pre>
+<p><code>tests/test_socid.cpp</code> builds each family's <code>/proc</code> and <code>/sys</code> in a
+directory and scans it (<code>sysfacts::scanUnit(root)</code>).</p>
+<h2 id="this-is-a-fingerprint-not-a-proof-of-uniqueness">This is a fingerprint, not a proof of uniqueness</h2>
+<p>Eighteen units gave one collision on the lot alone, resolved by the die
+bytes. That is evidence the combination discriminates better than anything
+else available, not that it cannot collide. Treated as one, the worst case
+is two consoles sharing a profile — which is where every one of them is
+today.</p>
+<p><code>--fake-otp PATH</code> reads the OTP from a file, so the page can be looked at
+and the decoder exercised on a machine with no RK3326 in it.</p>
+    <p class="foot">From <code>docs/unit-identity.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

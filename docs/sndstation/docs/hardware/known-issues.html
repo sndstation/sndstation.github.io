@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Known issues · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-root="../../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="../getting-started/images.html">Getting an image, and going back</a></li><li><a href="../getting-started/installation.html">Installation</a></li><li><a href="../getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="supported.html">Supported hardware</a></li><li><a href="known-issues.html" aria-current="page">Known issues</a></li><li><a href="reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="../usb-networking.html">USB networking</a></li><li><a href="../launcher.html">The sndstation launcher and session</a></li><li><a href="../updates.html">Software packages</a></li><li><a href="../rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="../audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="../audio-stack.html">The audio stack</a></li><li><a href="../audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="../gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="../unit-identity.html">Which unit this is</a></li><li><a href="../stick-leds.html">The lights around the analog sticks</a></li><li><a href="../device-events.html">Device events</a></li><li><a href="../midi.html">MIDI devices</a></li><li><a href="../audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../../SECURITY.html">Security policy</a></li><li><a href="../../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../../SUPPORT.html">Support</a></li><li><a href="../../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../../index.html">Docs</a> / Hardware</p>
+<h1 id="known-issues">Known issues</h1>
+<p>Each item gives the symptom, what it affects, a workaround where there is
+one, and the issue that tracks it. Per-unit status is in
+<a href="supported.html">supported.md</a>.</p>
+<h2 id="for-developers">For developers</h2>
+<h3 id="a-pull-request-gets-no-ci-run-until-someone-asks-for-one">A pull request gets no CI run until someone asks for one</h3>
+<ul>
+<li><strong>Symptom:</strong> a pull request shows no build or test run.</li>
+<li><strong>Why:</strong> CI runs nothing on its own: the account has a small allowance
+  of Actions minutes for this private repository, and macOS bills at 10×.</li>
+<li><strong>Workaround:</strong> add the label <code>ci: build</code>, <code>ci: linux</code>, <code>ci: macos</code>, or
+  <code>ci: aarch64</code> to the pull request, or use Run workflow under Actions
+  (<span>CONTRIBUTING</span>).</li>
+</ul>
+<p>The five tests that used to fail on macOS (<code>test_socid</code>, <code>test_about</code>,
+<code>test_audioin</code>, <code>test_mdfourier</code> and <code>test_audioout</code>) pass there since
+#181. On macOS, <code>test_mdfourier</code> reports a 192 kHz difference rather than
+failing, because the reference checksums come from glibc's math library.
+Measured on an Apple-silicon Mac (macOS 27.3): 40 of 40 tests pass.</p>
+<h2 id="on-the-units">On the units</h2>
+<h3 id="rg40xx-h-and-rg35xx-sp-no-button-map-of-their-own">RG40XX H and RG35XX SP: no button map of their own</h3>
+<ul>
+<li><strong>Symptom:</strong> neither unit has a map made for it. Both share the
+  speculative <code>RG28xx (more?)</code> entry in <code>config/gamepads.json</code>.</li>
+<li><strong>RG35XX SP:</strong> that entry works. On two SP units the launcher matched it
+  to the <code>common17</code> map (17 buttons), measured 2026-11-16 (#132).</li>
+<li><strong>RG40XX H:</strong> not tried yet. If it does not match, the unit may not get
+  past the first screen.</li>
+<li><strong>Affects:</strong> Anbernic RG40XX H (#130), Anbernic RG35XX SP (#132).</li>
+<li><strong>Workaround:</strong> none recorded for the RG40XX H. Nobody has tried Map
+  this controller, the wizard at SETTINGS → Controls, on it
+  (<a href="../launcher.html">launcher.md</a>, Controls). A unit with no pad found at all leaves to a shell after five
+  seconds, where a keyboard or ssh works (<a href="../launcher.html">launcher.md</a>,
+  "No gamepad at all"); that is a way in, not a fix.</li>
+<li><strong>Tracking:</strong> #130 and #132. Both are marked as needed before the
+  developer beta.</li>
+</ul>
+<h3 id="rgb30-and-trimui-smart-pro-no-routes-for-the-built-in-card">RGB30 and TRIMUI Smart Pro: no routes for the built-in card</h3>
+<ul>
+<li><strong>Symptom:</strong> there is no codec table for the built-in card, so sound is
+  not routed as on the other units. On the RGB30 there is a card choice
+  (the built-in card is taken over HDMI's card 0) but no routes. For the
+  A133P there is nothing.</li>
+<li><strong>Affects:</strong> Powkiddy RGB30 (#129), TRIMUI Smart Pro (#131).</li>
+<li><strong>Workaround:</strong> none recorded. Give these two units to testers, not to
+  someone who needs sound to build an app. A USB audio interface is picked
+  automatically when plugged in (<a href="../launcher.html">launcher.md</a>, Audio), but
+  that has not been tried on these two units.</li>
+<li><strong>Tracking:</strong> #129 and #131.</li>
+</ul>
+<h3 id="rgb30-realtime-audio-refused-under-config_rt_group_sched">RGB30: realtime audio refused under <code>CONFIG_RT_GROUP_SCHED</code></h3>
+<ul>
+<li><strong>Symptom:</strong> the audio thread stays an ordinary thread, and stderr says
+  the kernel is refusing <code>SCHED_FIFO</code> although <code>ulimit -r</code> allows it.</li>
+<li><strong>Affects:</strong> kernels built with <code>CONFIG_RT_GROUP_SCHED</code>, found on the
+  RGB30 (kernel 7.0.2).</li>
+<li><strong>Workaround:</strong> boot with <code>rt_group_sched=0</code> on the kernel command line.
+  The install script checks for this kernel and says so, but does not
+  change the boot line (<a href="../rt-bench.html">rt-bench.md</a>, "Allowing it").</li>
+<li><strong>Tracking:</strong> #129 ("reproduces or is closed").</li>
+</ul>
+<h3 id="rg35xx-sp-the-lid-file-ships-empty">RG35XX SP: the lid file ships empty</h3>
+<ul>
+<li><strong>Symptom:</strong> <code>config/deviceevents.json</code> has no entry for the SP, so on a
+  stock BSP image the lid's <code>hallkey</code> attribute is never read.</li>
+<li><strong>Affects:</strong> the RG35XX SP on the stock BSP image. On the sndstation
+  rootfs the lid is evdev <code>gpio-keys-lid</code> and needs no entry
+  (<a href="../device-events.html">device-events.md</a>).</li>
+<li><strong>Workaround:</strong> use the sndstation rootfs. To add the entry, read the
+  attribute with the lid open and shut and report it
+  (<a href="reporting.html">reporting.md</a>).</li>
+<li><strong>Tracking:</strong> #132.</li>
+</ul>
+<h3 id="rg35xx-sp-no-bluetooth-on-about-half-of-boots">RG35XX SP: no Bluetooth on about half of boots</h3>
+<ul>
+<li><strong>Symptom:</strong> no <code>hci0</code> appears, so bluetoothd never starts and paired
+  controllers stay away. The Realtek RTL8821CS on the SP's UART never
+  answers the link's SYNC, and the driver logs nothing more.</li>
+<li><strong>Affects:</strong> the RG35XX SP. Measured on an SP (Debian 13, kernel 7.2): 4
+  boots of 8.</li>
+<li><strong>Workaround:</strong> none needed with the package installed. Its handheld half
+  enables <code>sndstation-bt-h5.service</code>. At boot it rebinds the driver when no
+  hci device appears within six seconds, up to three times. Measured on an
+  SP with the service installed: 6 reboots in a row, <code>hci0</code> and a paired
+  BLE-MIDI controller back every time, one of them by a rebind
+  (<code>6be33dc</code>). What it did is in <code>journalctl -u sndstation-bt-h5</code>. The
+  same rebind by hand is two commands run as root
+  (<a href="../launcher.html">launcher.md</a>, "Bluetooth at boot").</li>
+<li><strong>Tracking:</strong> none needed, because the boot service is the fix. The SP's
+  slot is #132.</li>
+</ul>
+<h3 id="h700-sdls-alsa-stream-panics-the-kernel-under-preempt_rt">H700: SDL's ALSA stream panics the kernel under PREEMPT_RT</h3>
+<ul>
+<li><strong>Symptom:</strong> a kernel panic in <code>sun6i_dma_interrupt</code>, racing a stop of the
+  card's DMA. It follows SDL's ALSA stream, which starts with one frame
+  queued and so underruns, and restarts, at a short period
+  (<a href="../audio-device.html">audio-device.md</a>, §3.0).</li>
+<li><strong>Affects:</strong> H700 units (RG40XX H, RG35XX SP, RG CubeXX) on a PREEMPT_RT
+  kernel.</li>
+<li><strong>Workaround:</strong> none needed by default. sndstation plays through its own
+  stream on alsa-lib, which fills the buffer before it starts. Setting
+  <code>SNDSTATION_AUDIO_STREAM=sdl</code> (or <code>sndstation-audiotest --sdl</code>) brings SDL's
+  stream back for comparison. <strong>Do not set it on an H700 under PREEMPT_RT
+  unless you accept a panic.</strong> A program that does not go through the SDK
+  uses SDL's stream and is exposed.</li>
+<li><strong>Tracking:</strong> #130 ("SDL's ALSA stream stays off this card").</li>
+</ul>
+    <p class="foot">From <code>docs/hardware/known-issues.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../../search-index.js" defer></script>
+<script src="../../../assets/search.js" defer></script>
+</body>
+</html>
