@@ -30,7 +30,11 @@
 <div class="layout">
   <nav class="side" aria-label="Pages">
 <div class="side-group"><ul><li><a href="index.html" aria-current="page">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="users/identify-your-unit.html">Identifying your unit</a></li><li><a href="users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
 <div class="side-group"><span class="group">Getting started</span><ul><li><a href="sndstation/docs/getting-started/images.html">Getting an image, and going back</a></li><li><a href="sndstation/docs/getting-started/installation.html">Installation</a></li><li><a href="sndstation/docs/getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="sndstation/docs/hardware/supported.html">Supported hardware</a></li><li><a href="sndstation/docs/hardware/known-issues.html">Known issues</a></li><li><a href="sndstation/docs/hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="sndstation/docs/usb-networking.html">USB networking</a></li><li><a href="sndstation/docs/launcher.html">The sndstation launcher and session</a></li><li><a href="sndstation/docs/updates.html">Software packages</a></li><li><a href="sndstation/docs/rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="sndstation/docs/audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="sndstation/docs/audio-stack.html">The audio stack</a></li><li><a href="sndstation/docs/audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="sndstation/docs/gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="sndstation/docs/unit-identity.html">Which unit this is</a></li><li><a href="sndstation/docs/stick-leds.html">The lights around the analog sticks</a></li><li><a href="sndstation/docs/device-events.html">Device events</a></li><li><a href="sndstation/docs/midi.html">MIDI devices</a></li><li><a href="sndstation/docs/audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="sndstation/SECURITY.html">Security policy</a></li><li><a href="sndstation/CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="sndstation/SUPPORT.html">Support</a></li><li><a href="sndstation/.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
 <div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
   </nav>
   <main id="main" class="prose">
@@ -57,9 +61,10 @@ and the API is 0.x. This repository is private until the docs are ready.</p>
 <ol>
 <li><strong>Find a supported unit.</strong> sndstation runs on RK3326, RK3566, H700, and
    A133P handhelds. A shop listing names the model, not the chip:
-   <span>supported hardware</span> lists the models,
-   and <span>Identifying your unit</span> will say how to
-   tell which one you hold. To choose one to buy, the
+   <a href="sndstation/docs/hardware/supported.html">supported hardware</a> lists the models,
+   and <a href="users/identify-your-unit.html">Identifying your unit</a> says how to
+   tell which one you hold. On an RK3326 unit, read it before you flash.
+   To choose one to buy, the
    <a class="ext" href="https://sndstation.github.io/devices/">device guide</a> lists the units we have validated and ranks the
    rest on paper.</li>
 <li><strong>Get a microSD card of your own.</strong> Do not flash the card the unit came
@@ -82,10 +87,13 @@ and the API is 0.x. This repository is private until the docs are ready.</p>
    <a href="sndstation/docs/getting-started/installation.html#installing-on-a-handheld">Installing on a handheld</a>.
 4. <strong>Put the card in and switch on.</strong> The unit boots to the launcher. Set up
    the network in SETTINGS → Network: Wi-Fi where the unit has it, or
-   <span>USB networking</span> to a computer where it does
+   <a href="sndstation/docs/usb-networking.html">USB networking</a> to a computer where it does
    not.
 5. <strong>Make music.</strong> The <span>user guide</span> is a stub; until it is
-   written, <span>the launcher</span> describes every screen.</p>
+   written, <a href="sndstation/docs/launcher.html">the launcher</a> describes every screen.
+   Before buying anything to plug in,
+   <a href="users/peripherals.html">Peripherals</a> says what works on your unit:
+   interfaces and MIDI, controllers, drives, Wi-Fi dongles, webcams.</p>
 <h2 id="for-developers">For developers</h2>
 <p>A CLAP plugin built for Linux arm64 against Debian trixie's glibc loads on a
 unit as it is. The launcher finds it, checks it, and rates it
@@ -133,7 +141,7 @@ every line, runs it, and measures it on a unit.</p>
 measured. Start a how-to from the
 <span>guide template</span>. A stub keeps its <strong>Stub</strong>
 note until the page is written.</p>
-    <p class="foot"><code>README.md</code> · changed 2026-11-21</p>
+    <p class="foot"><code>README.md</code> · changed 2026-11-25</p>
   </main>
 </div>
 

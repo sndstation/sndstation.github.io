@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>--rt-bench: measuring the audio thread&#x27;s headroom · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html" aria-current="page">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="--rt-bench-measuring-the-audio-threads-headroom">--rt-bench: measuring the audio thread's headroom</h1>
+<p>Scheduling changes — a realtime audio thread, nicer helper threads, a
+reserved core — are easy to make and hard to judge by ear. <code>--rt-bench</code>
+turns "it seems better" into one number that can be compared across
+configurations, units and kernels: <strong>headroom</strong>, the share of each audio
+period the callback can spend before the card underruns.</p>
+<h2 id="running-it">Running it</h2>
+<p>The bench is the SDK's (<code>&lt;sndstation/rtbench.h&gt;</code>), and an app runs it: it hands
+<code>rtbench::start()</code> its open <code>AudioOut</code> and an <code>rtbench::Instrument</code> (a chord
+to hold, and a name for it), takes the <code>--rt-*</code> flags with <code>rt::parseArg()</code>,
+and calls <code>rtbench::frame()</code> every frame. <code>examples/hello</code> does, with its
+test tone as the instrument (<code>hello --rt-bench</code>); it is the wiring to copy.
+With <code>app</code> standing for an app that does:</p>
+<pre><code class="language-sh">app --rt-bench --rt-noise 4                      # as shipped: SCHED_FIFO 70
+app --rt-bench --rt-noise 4 --rt-fifo 0          # baseline: an ordinary thread
+app --rt-bench --rt-noise 4 --rt-cpu 2           # audio thread pinned to core 2
+app --rt-bench --rt-noise 4 --rt-helpers-nice 10 # helpers lowered
+</code></pre>
+<p>The audio thread's scheduling comes from the platform's <code>system.json</code> —
+<code>audio.realtime_priority</code> (70 as shipped) and <code>audio.cpu</code> (-1, no pin) — and
+the flags override it for one run. A baseline has to say <code>--rt-fifo 0</code>
+explicitly.</p>
+<p>It runs the real program — window, UI drawing, the instrument that is
+loaded — so what it measures is what the app does on that unit, not what
+the hardware could do in isolation. After a 3 s warm-up it holds a
+chord (struck again every 2 s) and steps the callback's load up; at each
+step it prints a line, and at the end one <code>RESULT</code> line, then quits.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--rt-bench</code></td>
+<td></td>
+<td>run the sweep, print, quit</td>
+</tr>
+<tr>
+<td><code>--rt-loads a,b,…</code></td>
+<td><code>0,50,70,80,85,90,95</code></td>
+<td>percent of the period, in order</td>
+</tr>
+<tr>
+<td><code>--rt-step S</code></td>
+<td><code>20</code></td>
+<td>seconds per step</td>
+</tr>
+<tr>
+<td><code>--rt-fifo P</code></td>
+<td><code>audio.realtime_priority</code></td>
+<td>audio thread to <code>SCHED_FIFO</code> P; 0 = ordinary</td>
+</tr>
+<tr>
+<td><code>--rt-cpu N</code></td>
+<td><code>audio.cpu</code></td>
+<td>audio thread pinned to core N; -1 = any</td>
+</tr>
+<tr>
+<td><code>--rt-helpers-nice N</code></td>
+<td>off</td>
+<td>helper threads (<code>ss-amixer</code>, <code>ss-leds</code>) to nice N</td>
+</tr>
+<tr>
+<td><code>--rt-noise N</code></td>
+<td>0</td>
+<td>N competing threads on every core</td>
+</tr>
+<tr>
+<td><code>--rt-proc 0\|1</code></td>
+<td>0 when alsa-lib's count is available</td>
+<td><code>/proc</code> status reads, for the buffer margin (below)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The <code>--rt-fifo</code>, <code>--rt-helpers-nice</code> and <code>--rt-noise</code> switches work without
+<code>--rt-bench</code> as well, so a configuration that measured better can be
+listened to.</p>
+<h2 id="what-it-found-and-what-ships">What it found, and what ships</h2>
+<p>On an RG351V (RK3326, kernel 7.1.2, 48 kHz / 512 frames, built-in synth),
+with <code>--rt-noise 4</code>:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>audio thread</th>
+<th>headroom</th>
+<th>worst late, no added load</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ordinary, nice 0</td>
+<td>0% — 115 underruns at 50%</td>
+<td>12.8 ms</td>
+</tr>
+<tr>
+<td>ordinary, nice -20 (as root)</td>
+<td>0% — 6 underruns at 50%</td>
+<td>5.7 ms</td>
+</tr>
+<tr>
+<td><code>SCHED_FIFO 70</code></td>
+<td><strong>90%</strong></td>
+<td>1.7 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>Without the noise, an ordinary thread still came 4-4.8 ms late 36 times a
+minute, at irregular spacing (the UI, Mesa, kernel workers); at FIFO 70,
+never more than 1 ms. A high nice is not enough: an ordinary thread at any
+nice still shares the CPU fairly, and only a realtime policy goes first.</p>
+<p>A Powkiddy RGB30 (RK3566, kernel 7.0.2, 48 kHz / 256 frames, built-in
+synth, booted <code>rt_group_sched=0</code> — see "Allowing it") agrees: with no
+added load an ordinary thread came 18 ms late at worst and underran twice
+in a minute; at FIFO 70, 1.12 ms and clean. With <code>--rt-noise 4</code>, clean
+through 90%, failing at 95%.</p>
+<p>So the audio thread runs <strong>SCHED_FIFO 70 by default</strong>, raised by the
+thread itself on its first callback (<code>rt::audioThreadEnter</code>) rather than
+through SDL's priority hints, which pick their own number and say nothing
+when refused.</p>
+<h3 id="pinning-and-the-helpers-measured-and-left-off">Pinning, and the helpers: measured, and left off</h3>
+<p>Same unit and noise, FIFO 70 in each:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>headroom</th>
+<th>failed at</th>
+<th>worst late, no added load</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>no pin (<code>audio.cpu</code> -1, shipped)</td>
+<td><strong>90%</strong></td>
+<td>95%</td>
+<td>1.56 ms</td>
+</tr>
+<tr>
+<td>pinned to core 2 (<code>--rt-cpu 2</code>)</td>
+<td>85%</td>
+<td>90%</td>
+<td>1.68 ms</td>
+</tr>
+<tr>
+<td>helpers at nice 10 (<code>--rt-helpers-nice 10</code>)</td>
+<td>90%</td>
+<td>95%</td>
+<td>1.55 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>Pinning failed a step earlier, on the same once-a-second ~50 ms stalls as
+below. That fits how the kernel's reserve for ordinary threads works: it
+is paid per core, and an unpinned realtime thread can move to another core
+while one is paying it; a pinned one has to wait it out. One step is within
+run-to-run noise, but nothing points the other way, so the audio thread is
+not pinned. Lowering the helpers changed nothing, as it should not: once
+the audio thread is realtime, no ordinary thread gets ahead of it at any
+nice. Both stay as flags, for measuring.</p>
+<h3 id="why-95-fails-and-why-that-is-fine">Why 95% fails, and why that is fine</h3>
+<p>At 95% the FIFO thread underran once a second, ~50 ms each time, like
+clockwork (<code>median spacing 1.01 s</code>). That is the kernel keeping 50 ms of
+every second, on each CPU, for ordinary threads (RT throttling; on newer
+kernels the "fair server"): the noise threads starved by a thread that
+would take 95% of a core get their 50 ms at once. It is the same rule that
+keeps a runaway plugin from freezing the box — it stalls its own audio
+instead — and it puts the practical ceiling near 90%.</p>
+<p>At a short buffer the failure is not a few clicks but a cascade: the RGB30
+at 256 frames underran 1639 times in 11 s at 95%. After an underrun the
+stream restarts nearly empty, and a callback that takes 95% of every period
+gains only 5% of one back per period — never enough to refill before the
+next stall. (The console says each underrun at most once a second, with a
+count of the rest.)</p>
+<h3 id="allowing-it">Allowing it</h3>
+<p>A user may raise a thread to realtime only up to its <code>RLIMIT_RTPRIO</code>
+(<code>ulimit -r</code>), which is 0 by default. Without an allowance the raise is
+refused, said once on stderr —</p>
+<pre><code>rt: audio thread: SCHED_FIFO 70 refused (Operation not permitted; ulimit -r is 0) — it stays ordinary.
+</code></pre>
+<p>— and shown on the launcher's AUDIO / DIAGNOSTICS, row <strong>Thread</strong>, in the
+warning color.</p>
+<p>On a recognized handheld (an RK3326, RK3566 or H700 device tree, or a
+Raspberry Pi with no desktop installed) the package's
+install script links <code>/etc/security/limits.d/90-sndstation.conf</code> into
+place — on a desktop it does not, and says so — granting the
+<code>audio</code> group 95: what PipeWire's own <code>25-pw-rlimits.conf</code> grants
+<code>@pipewire</code>, so on a machine with both it can only raise a limit, never
+lower PipeWire's below the 88 it asks for. <code>pam_limits</code> applies it <strong>at login</strong>: log out and in
+again, then <code>ulimit -r</code> should say 95. The user must be in <code>audio</code>
+(<code>groups</code>; <code>sudo usermod -aG audio &lt;user&gt;</code>).</p>
+<p><strong>Refused although <code>ulimit -r</code> allows it</strong> — the program says so on a
+second line:</p>
+<pre><code>rt: the limit allows 70, so the kernel is refusing it: a kernel built with CONFIG_RT_GROUP_SCHED gives a login session no realtime budget. Boot it with rt_group_sched=0 on the kernel command line.
+</code></pre>
+<p>With <code>CONFIG_RT_GROUP_SCHED=y</code> and cgroup v2, every cgroup but the root
+gets a realtime budget of zero, and a login session
+(<code>/user.slice/…/session-N.scope</code>) is never the root: realtime is refused
+there for everyone, root and <code>sudo chrt</code> included. Found on a Powkiddy RGB30
+(kernel 7.0.2). Kernels with the option also take a boot parameter that
+switches it off, <code>rt_group_sched=0</code>: append it to the kernel command line —
+on most handheld images the <code>APPEND</code> line of <code>/boot/extlinux/extlinux.conf</code>
+— and reboot. <code>cat /proc/cmdline</code> shows it took; <code>chrt -f 70 true</code> from the
+session then succeeds. The install script checks for this kernel and says
+so, but leaves the boot line alone.</p>
+<p>Where the login does not go through <code>pam_limits</code>, the binary can carry the
+capability itself: <code>sudo setcap cap_sys_nice+ep &lt;path to the app&gt;</code>.
+Two catches — a binary with a capability ignores <code>LD_LIBRARY_PATH</code>, and a
+rebuild drops it.</p>
+<h2 id="watching-it-day-to-day-the-cpu-meter">Watching it day to day: the CPU meter</h2>
+<p>The bench answers "how much more fits"; the status bar answers "how much
+is this using". <strong><code>CPU 34%</code></strong>, beside the battery, is the share of one core
+the audio thread used over the last second — the instrument or plugin,
+plus SDL's conversion and the ALSA write — from the kernel's clock for
+that thread (<code>CLOCK_THREAD_CPUTIME_ID</code>), which counts what the thread ran
+and nothing it waited for. It is the figure to watch while optimizing: a
+function that took the meter from 56% to 34% did exactly that.</p>
+<p>The color follows the <strong>worst</strong> period of that second, not the average:
+amber once one render took 70% of its period, red at 90%. An average of
+34% can hide the one block that clicks.</p>
+<p>The same two figures are on the launcher's AUDIO / DIAGNOSTICS (row <strong>CPU</strong>)
+and on the <code>--stats</code> line (<code>audio cpu 34% (peak 61%)</code>). <code>ui.cpu_meter</code>
+hides the status-bar one.</p>
+<p>To see the same thing in btop, pin the thread (<code>"audio": { "cpu": 2 }</code>):
+core 2 then carries the audio thread, and its graph reads about what the
+meter does — a little more, since btop also counts whatever else the
+kernel runs on that core. Pinning measured a step worse under heavy
+competition (below), which is why it is not the default; for watching,
+that is a fair trade.</p>
+<p>Measured against a known load (the bench's busy-loop, SDL's dummy driver):
+expected 20% and 33%, the meter read 21% and 33%.</p>
+<h2 id="what-a-step-is">What a step is</h2>
+<p>The callback renders as usual, then spins until it has used the step's
+share of the period — standing in for a heavier plugin. At 70% on a
+5.33 ms period, every callback takes 3.7 ms. The thread is still paced by
+the card (SDL's ALSA backend blocks in <code>snd_pcm_writei</code>), so a sustained
+load below 100% only underruns when the thread is woken late — which is
+exactly what scheduling changes are meant to fix.</p>
+<p>The sweep stops at the first step that underran. <strong>Headroom</strong> is the last
+load that did not. When no step underran — the list ran out, or the run
+was cut short — it is printed as a floor, <code>headroom=&gt;=90%</code>: nothing higher
+was tried.</p>
+<p>Stopping a run early (Ctrl-C, or quitting) is fine, and on a long step the
+normal way to end one: the step in progress is measured as far as it got,
+printed under <code>(step stopped after N s)</code>, and counted. A configuration that moves it from 60% to 85% is better
+by an amount that means something: that much more plugin fits.</p>
+<h2 id="where-underran-comes-from">Where "underran" comes from</h2>
+<p>Two accounts, neither of them this program's own timing:</p>
+<ul>
+<li><strong>alsa-lib.</strong> The stream (audio-device.md §3.0, or SDL's ALSA backend)
+  recovers every underrun with
+  <code>snd_pcm_recover(…, silent = 0)</code>, and alsa-lib reports it —
+  <code>ALSA lib pcm.c:…:(snd_pcm_recover) underrun occurred</code>. The bench installs
+  alsa-lib's error handler (through the copy SDL already loaded) and counts
+  those, still printing every message as alsa-lib would. <code>xruns</code> in the
+  step line.</li>
+<li><strong>The card's buffer.</strong> <code>/proc/asound/cardN/pcmNp/subN/status</code> carries
+  <code>avail_max</code>, how empty the buffer got; <code>buffer_size - avail_max</code> is the
+  margin that was left. The kernel resets <code>avail_max</code> on every read of
+  <code>status</code>, so with <code>--rt-proc 1</code> the bench reads it four times a second
+  and keeps the worst. <code>margin min</code> in the step line, in frames; 0 or less
+  is an underrun. <strong>Off by default</strong> whenever alsa-lib's count is there,
+  because reading <code>status</code> is not free of consequences: it makes the
+  kernel ask the driver where the DMA is, and acts on the answer. On an RG
+  CubeXX (H700, kernel 7.2) the bench counted single, sudden underruns —
+  about one a minute, with every callback on time (worst 0.6 ms late of a
+  21 ms buffer) — while the same stream played for minutes without one
+  when nothing read <code>status</code>. The reads are the difference, so they are
+  off unless asked for. On the RG351V (RK3326) they never caused one.
+  Some kernels have no such file at all: the per-stream directories are
+  <code>CONFIG_SND_VERBOSE_PROCFS</code>, which the RGB30's 7.0.2 leaves off (its
+  <code>card1/</code> holds only <code>id</code>). There the bench says so on its first line,
+  the RESULT line has <code>access=unknown buffer=unknown</code>, DIAGNOSTICS shows no
+  buffer or margin, and alsa-lib's count is the only one.</li>
+</ul>
+<p>A step is clean only when both say so. On a backend that is not ALSA
+(PipeWire, PulseAudio, CoreAudio on a Mac) neither exists for this stream,
+and a wakeup of the device more than one of its cycles late is the
+stand-in; the header line says which applies.</p>
+<p><strong>A device that takes several periods at a wakeup.</strong> Not every backend
+calls once a period. CoreAudio on a Mac, its device cycle 512 frames under
+a 256-frame stream, calls twice back to back every 11.6 ms: gaps of 0.01
+and 11.6 ms, never 5.8 (measured with plain SDL, so it is the backend, not
+this program; asking SDL for 256-frame device buffers changed nothing).
+Measured against one period, every other callback looked 5.8 ms late, and a
+sweep "underran" at 0%. So the warm-up counts the callbacks per wakeup —
+<code>burst</code> in the RESULT line, with a line saying so when it is more than 1 —
+and a callback is late only by how far it trails the schedule of every one
+of the last <code>burst</code> callbacks; the stand-in above is a wakeup more than
+<code>burst</code> periods late. With a burst of 1, which ALSA's is, that is a
+callback's gap less one period, exactly as before, so results from before
+the change compare. On that Mac, with <code>--rt-noise 4</code>: lateness about
+0.06 ms at every step, clean through 95%.</p>
+<p><strong>Nothing else may read the PCM's <code>status</code> file during a run.</strong> AUDIO /
+DIAGNOSTICS reads it twice a second, which is why it was once the thing to
+close first; it is the launcher's now and never open while an app runs, but
+a shell loop on <code>/proc/asound</code> would do the same: it resets <code>avail_max</code>
+under the bench, and on the H700 it can cause the very underrun above.</p>
+<h2 id="reading-the-output">Reading the output</h2>
+<pre><code>rtbench: load  70%  calls 3750  late p99 0.21 p99.9 0.64 max 1.90 ms  render max 0.31 ms (cpu 0.29)  margin min 180 f  xruns 0  clean
+rtbench:    worst:  +3.12s 0.58 ms late (render before 0.28, cpu 0.27)  +8.11s 1.90 ms late (render before 0.25, cpu 0.24)  ...
+rtbench: RESULT headroom=85% unit=&quot;Anbernic RG351V&quot; kernel=6.12.x driver=alsa pcm=hw:0,0 access=RW_INTERLEAVED rate=48000 frames=256 burst=1 buffer=512 audio=&quot;SCHED_OTHER, nice 0, cpus 2&quot; fifo=0 helpers_nice=0 noise=0 instrument=TESTSYNTH base_late_p999=0.64ms base_late_max=1.90ms
+</code></pre>
+<ul>
+<li><strong>late</strong> — how far past the period each callback arrived, as percentiles;
+  per wakeup of the device where it takes several callbacks at once
+  (<code>burst</code>, above). The 0% step's figures (<code>base_late_*</code> in the result) are the scheduling
+  noise floor with no load at all.</li>
+<li><strong>render max … (cpu …)</strong> — rendering alone, before the spin, as wall
+  time and as the CPU time the thread actually got for it.</li>
+<li><strong>worst</strong> — the four latest callbacks of the step, in time order: when
+  (seconds into the step), how late, and the callback <em>before</em> it — its
+  render in wall time and in CPU time. Those two say whose fault it was:</li>
+<li><strong>cpu about equal to render, both long</strong>: the instrument's own work —
+    a voice starting, a sample streamed. Scheduling cannot fix it.</li>
+<li><strong>render long, cpu short</strong>: the thread was preempted <em>in the middle of</em>
+    rendering. Wall time alone would blame the instrument for this; it is
+    scheduling, the same as —</li>
+<li><strong>both short</strong>: the thread was not run at all until late.</li>
+</ul>
+<p>Evenly spaced times point at a periodic cause: SDL's ALSA backend
+  re-lists the devices every 5 s from a thread of its own
+  (<code>SDLHotplugALSA</code>).
+- <strong>over 2 ms late</strong> — every callback that late, by time (the first 32),
+  and the median spacing between them. Four worst cases are too few to show
+  a period; this is where a steady spacing shows up.
+- <strong>instrument</strong> — what was actually sounding, as the app names it: an
+  instrument that failed to load and left a fallback playing is a different
+  load, and the report says which.
+- <strong>audio</strong> — the audio thread as the kernel reports it, read back rather
+  than assumed: policy, priority, nice, the cores it may run on. With
+  <code>--rt-fifo</code> and no rtprio allowance (<code>ulimit -r</code> is 0) it says the raise
+  was refused, and the run measured an ordinary thread.</p>
+<h2 id="making-a-comparison-mean-something">Making a comparison mean something</h2>
+<ul>
+<li><strong>Same unit, same instrument, same page, same <code>--rt-noise</code>.</strong> The
+  background is part of the measurement.</li>
+<li><strong>Several runs per configuration.</strong> A single run's worst moment is
+  partly luck. Three runs that agree are a result; one is an anecdote.</li>
+<li><strong>Change one thing at a time</strong> against a baseline run made the same day.</li>
+</ul>
+    <p class="foot">From <code>docs/rt-bench.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

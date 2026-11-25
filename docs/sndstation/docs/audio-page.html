@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Audio: one model, one decision-maker, a page that shows it · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html" aria-current="page">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="audio-one-model-one-decision-maker-a-page-that-shows-it">Audio: one model, one decision-maker, a page that shows it</h1>
+<p>How the unit's audio is set, kept and decided, and why the AUDIO page is
+built the way it is: <code>launcher/audiosetup.cpp</code> and the files beside it, on
+the SDK's <code>audiounit</code>, <code>audiodev</code> and <code>mixerio</code>. The overview, who opens the
+device and when, is <a href="audio-stack.html"><code>audio-stack.md</code></a>. The device layer
+underneath (the card, the buffer, the test signals, MDFourier) is
+<a href="audio-device.html"><code>audio-device.md</code></a>; the volume and the maximum are
+<a href="audio-levels.html"><code>audio-levels.md</code></a>.</p>
+<h2 id="the-rule">The rule</h2>
+<p>Audio is <strong>set and tested in the launcher</strong>. Every app opens its sound
+through the SDK (<code>AudioOut</code>) and <strong>follows the same decisions without
+working anything out itself</strong>: which card plays, which output on it, the
+route, the maximum, the volume. Programs outside the SDK get what the
+launcher's startup apply puts on the card, and nothing more.</p>
+<h2 id="why-it-is-built-this-way">Why it is built this way</h2>
+<p>The page before this one worked the same facts out in several places from
+several copies — the route in the page (from its unsaved profile), in
+<code>AudioOut</code> (from the file), at startup (from a third lookup) and in the
+wizard; which output played in three functions; which card in four — and
+more than one of them wrote to the card. Nearly every regression was two of
+them disagreeing. It also ran <code>amixer</code> for every read and write, about
+230 ms a call on an RG351V, and most of its modes (not watching the socket
+during a test, a frozen title, delayed writes) existed to hide that.</p>
+<p>So now:</p>
+<ul>
+<li><strong>One set of functions decides</strong> (<code>audiounit.h</code>): from the cards present,
+  the socket, the unit's set-up and its choices, which endpoint plays and
+  what playing it writes. They read nothing, so they are tested as a table
+  (<code>tests/test_audiounit.cpp</code>), and <code>AudioOut</code>, the startup apply, the
+  volume keys and the page all call them.</li>
+<li><strong>One writer</strong>: <code>AudioOut</code> applies routes and maximums when it opens,
+  when the card changes, and when asked (<code>refreshEndpoint</code>). A headphone
+  plug only <strong>swaps</strong> the route (where the set-up says software must: the
+  rk817's mux, the H700's amp) and the volume to that output's: no maximum
+  written, no card looked for, nothing reopened. Every program that plays
+  follows the plug, not only the AUDIO page.
+  The page saves a change and asks its own <code>AudioOut</code> to apply it, and
+  shows what that output reports. While the set-up by ear runs, the output
+  is told to keep its hands off the route (<code>holdRoute</code>).</li>
+<li><strong>The mixer in-process</strong> (<code>src/mixerio.cpp</code>): amixer's four verbs through
+  alsa-lib, printing exactly what amixer prints so the parser proven on
+  seventeen units stays the reader. Under a millisecond a read.</li>
+</ul>
+<h2 id="why-each-unit-has-a-profile-of-its-own">Why each unit has a profile of its own</h2>
+<p>Nothing about a handheld's audio can be read off its device tree.</p>
+<p>Of seventeen RK3326 units surveyed, <strong>seven report the same board model and
+the same <code>compatible</code></strong> — and they do not behave the same: five route audio
+cleanly, two play out of both outputs at once. An image builder patched a
+dts somewhere and the string stayed put. Whether the headphone detect bit
+means what it says, and which mux item reaches which physical output, are
+facts you establish by plugging something in and listening.</p>
+<p>So <strong>nothing is guessed</strong>: one unit's answer given to another would take a
+working box and silence it. A board the team has calibrated itself, on our
+own image, has a preset
+(<a href="#system-defaults-a-calibrated-boards-preset">below</a>); every other unit
+has only what was heard on it. The user's <code>audio.json</code> is keyed by
+<a href="unit-identity.html">the unit</a> — the <code>SOC ID</code> row on the ABOUT page — else
+the board model, else the built-in card, and only that key is read
+(<a href="#kept-audiojson-version-3">below</a>).</p>
+<p><strong>The wizard is offered once, never forced.</strong> A box whose audio already
+works — every desktop, and any handheld whose dts happens to be right — has
+nothing to calibrate. So on its first run the launcher puts up a card only on
+a handheld (a device tree, and a card with a speaker/headphone route) that
+is not set up, after the gamepad's own first run: A starts
+the wizard, B skips it, and the skip is remembered for the unit
+(<code>~/.config/sndstation/setup.json</code>, <code>audio_skipped</code>). A desktop is never
+asked, nor a unit its board's preset applies to: it is set up.</p>
+<h2 id="outputs">Outputs</h2>
+<p>An <strong>endpoint</strong> is a place sound comes out:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>speaker</code>, <code>headphones</code></td>
+<td>the built-in card's two outputs</td>
+</tr>
+<tr>
+<td><code>speaker+headphones</code></td>
+<td>both at once, where the board can make it</td>
+</tr>
+<tr>
+<td><code>out</code></td>
+<td>a unit that cannot tell which of the two plays (no usable detect bit): Automatic plays the speaker's route, the socket does the rest</td>
+</tr>
+<tr>
+<td><code>builtin</code></td>
+<td>the built-in card of a unit nobody has set up: nothing is routed</td>
+</tr>
+<tr>
+<td><code>usb:&lt;vid:pid&gt;</code></td>
+<td>a USB interface</td>
+</tr>
+<tr>
+<td><code>card:&lt;id&gt;</code></td>
+<td>any other card: HDMI</td>
+</tr>
+<tr>
+<td><code>default</code></td>
+<td>the system's own device: no card of ours</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Plays on</strong> is one choice among them, each a complete answer to where sound
+comes out:</p>
+<pre><code>Automatic                 USB if plugged in, else the jack decides
+Speaker + headphones      where the board can
+Speaker
+Headphones
+M8                        while plugged in
+HDMI                      while connected
+</code></pre>
+<ul>
+<li><strong>Automatic</strong>: a USB interface when one is plugged in; else the
+  headphones when they are in and the unit can tell; else the speaker.
+  HDMI is never chosen automatically.</li>
+<li>There is no "off": "neither speaker nor headphones" is choosing another
+  card, and something always plays. A chosen card that goes away falls back
+  to Automatic until it is back.</li>
+<li>Only what this unit can make is offered. The set-up by ear finds it out:</li>
+</ul>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Board</th>
+<th>Speaker + headphones</th>
+<th>Speaker alone, headphones in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H700 (the amp's switch is the route, the headphones always fed)</td>
+<td>yes</td>
+<td>no: the speaker asked for with headphones in plays both</td>
+</tr>
+<tr>
+<td>rk817 with a speaker switch</td>
+<td>yes</td>
+<td>as heard</td>
+</tr>
+<tr>
+<td>rk817 with a plain mux</td>
+<td>where one item plays both</td>
+<td>as heard</td>
+</tr>
+<tr>
+<td>a socket that cuts the speaker itself</td>
+<td>no</td>
+<td>no: only Automatic is offered</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>A unit nobody has set up offers Automatic, Built in and any other card,
+  and leaves the built-in card's routing as the system set it.</li>
+<li>Built-in and another card at once is not offered: two clocks need a
+  second stream and drift correction.</li>
+</ul>
+<h2 id="set-up-by-ear">Set up by ear</h2>
+<p><code>AUDIO / Set up by ear</code> derives the whole profile by asking, at each
+step, the one question a person holding the box can answer: <strong>where do you
+hear it</strong> — speaker, headphones, both, or nothing. Short beeps play
+throughout: 440 Hz, 120 ms in every 600, at −18 dBFS (<code>TestTone::Beeps</code>,
+<code>BEEP_LEVEL</code>), never a held tone. The page's volume is not applied to them,
+so a turned-down volume cannot make "nothing" a wrong answer; their level
+and their gaps are what keep a small speaker safe meanwhile.</p>
+<p>What it concludes goes in the unit's <code>set_up</code> (<code>detect</code>, <code>route_control</code>,
+<code>speaker_switch</code>, and a <code>route</code> for each output it can make: speaker,
+headphones, speaker + headphones where it heard both, and <code>out</code>, what
+Automatic plays where it cannot tell). While it runs, the page's sound
+output keeps its hands off the route. <strong>What it observed is kept beside
+it</strong>, in <code>survey</code>: the raw detect-bit readings plugged and unplugged, what was heard
+in each state, whether the jack switches mechanically, whether the speaker
+bleeds, whether the channels are swapped — plus the card's whole control
+list and the subset of it that could move sound around and that the profile
+never touches.</p>
+<p>That last one is written even when it is empty: "all of them accounted for"
+is a finding once it comes from twenty boards. The point of keeping the
+observations is that the conclusions can be re-derived later, from a
+different theory, without going back to the hardware.</p>
+<p>Two things the surveys settled that are not obvious:</p>
+<ul>
+<li><code>detect: "mechanical"</code> — some sockets have no detect bit at all and
+  switch the speaker themselves. That is a fourth state, not a broken
+  version of one of the other three.</li>
+<li><code>speaker_switch</code> — on rk817_ext the speaker mute is factored out into a
+  second control (<code>Internal Speakers</code>), so setting the mux alone leaves
+  both outputs playing. Empty where the mux suffices. It is also what
+  makes "speaker + headphones" a choice there: the headphones' route with
+  the speaker left on.</li>
+</ul>
+<h2 id="the-pages">The pages</h2>
+<pre><code> AUDIO                            ● Playing on Speaker · nothing in the socket
+ AUDIO SYSTEM  Device        ◂ Automatic · Speaker now ▸
+               Sample rate   Automatic · 48 kHz
+               Buffer size   ───|──────  256 frames / 5.3 ms        no clicks
+ OUTPUTS       Speaker       playing                                    -6 dB
+               Headphones    not plugged in                            -21 dB
+ LEVELS        User level    ────────|─  -6 dB                       software
+               System levels Master -6.0 dB · DAC 0.0 dB             hardware
+               Test sound    Off
+ TOOLS         Diagnostics   device, timing, startup
+               MDFourier     measurement, for a recorder
+</code></pre>
+<ul>
+<li><strong>Device</strong>: where sound comes out (it was Plays on). ◂▸ steps through the
+  choices; A lists every card (CARDS).</li>
+<li><strong>Sample rate</strong> and <strong>Buffer size</strong>: the playing card's, live, offering
+  only what the device answered when asked; kept per card.</li>
+<li><strong>An output</strong> (A on its row): its user level, Play on it; for the
+  built-in card, Set up by ear and, once set up, Corrections (plug
+  detection, swap, the speaker switch).</li>
+<li><strong>User level</strong>: a gain on the samples, in software, before the chip;
+  every app plays through it (<a href="audio-levels.html">audio-levels.md</a>).</li>
+<li><strong>System levels</strong>: the chip's own controls. Its playback levels are the
+  playing output's ceiling, and nothing else sets it: see below.</li>
+<li><strong>TOOLS</strong>: USB interface (while one is plugged in), Diagnostics,
+  MDFourier, each a view of its own.</li>
+</ul>
+<p>The <strong>test sound</strong> is pings peaking at full scale, played at the volume:
+what a loud app does at this volume. The steady sine stays at -12 dBFS (a
+continuous sine is the signal that cooks a small speaker), and so does the
+set-up by ear, which runs before any maximum exists.</p>
+<p>The page plays into the launcher's stream (<code>launcher/audio.h</code>), opened when
+the launcher starts: its test sounds are a source on that stream's mixer from
+the page's open to its close, at the user level, or past it in System
+levels, where an output's ceiling is judged (on headphones, at the user
+level there too). It is also the one place that reopens that stream:
+a card, a rate, a buffer size (<a href="audio-stack.html"><code>audio-stack.md</code></a>). Built
+alone (<code>--shots</code>, the tests), it has a stream of its own, opened and closed
+with the page.</p>
+<h3 id="what-holds-across-the-views">What holds across the views</h3>
+<p>The views are also listed in <a href="launcher.html#audio"><code>launcher.md</code></a>. What holds
+across them:</p>
+<ul>
+<li><strong>The title line answers the question people open an audio page
+  with</strong>: where is the sound going, and is anything plugged in. It shows
+  what the page's own sound output reports, so it is never stale.</li>
+<li><strong>The bottom bar says what the selected row does</strong> (its tooltip), and
+  for a choice, what <em>that choice</em> does. A message takes its place while it
+  lasts. There is no help box: the list has the room.</li>
+<li><strong>Nothing waits to be saved.</strong> Every change is written as it is made, and
+  "✓ Saved" shows in the title bar for a moment. <code>--shots</code> writes the
+  caption as <code>09a-audio-saved</code>.</li>
+<li><strong>Rows that cannot mean anything are not offered</strong>: a unit not set up has
+  no Corrections.</li>
+<li>Choices take ◂▸ and show arrows when selected; rows that open a view take
+  A and say so.</li>
+</ul>
+<p>Every <em>reading</em> is in <code>DIAGNOSTICS</code>, with a one-sentence verdict at the top
+and the figures underneath. Every <em>control</em> is in <code>SYSTEM LEVELS</code>.</p>
+<h3 id="plays-on-and-cards-which-card-plays">Plays on and Cards: which card plays</h3>
+<ul>
+<li><strong><code>Device</code></strong> chooses where sound comes out: Automatic, an output of the
+  built-in card, or any other card that plays, by its id
+  (<a href="#outputs">Outputs</a>). The sound moves there at once
+  (<code>AudioOut::setDevice</code>, then <code>refreshEndpoint</code>). Each card keeps its own
+  rate and buffer size.</li>
+<li><strong><code>Cards</code></strong> (A on Device) lists every card, built in and USB, playback and
+  capture alike, by name, with its direction and, where the card says them,
+  the format and rate of each direction. A plays to the card under the
+  cursor, and so does <code>Automatic</code> at the top.</li>
+<li><strong>The list follows plugging.</strong> The page reads <code>/proc/asound</code> twice a
+  second, so a card plugged in or pulled out appears or goes while the
+  page is open, and the page's sound output follows it (<a href="audio-device.html">audio-device.md</a> §3.3, Hotplug).</li>
+<li><strong>An HDMI card plays through ALSA's <code>hdmi</code> device</strong> where ALSA's own file
+  for its driver defines one (<code>/usr/share/alsa/cards/&lt;driver&gt;.conf</code>):
+  <code>hdmi:CARD=vc4hdmi,DEV=0</code> on a Raspberry Pi. The Pi's HDMI hardware
+  (<code>vc4-hdmi</code>) takes IEC958 frames and nothing else, so <code>hw</code> and <code>plughw</code>
+  refuse every format SDL has and nothing sounds; ALSA's device encodes
+  them. Automatic never picks a display output: on a Pi it takes the
+  headphone socket, and Plays on picks <code>vc4hdmi</code> for a screen with speakers.</li>
+</ul>
+<p><code>--fake-audio m8</code> answers as an RG35XX SP with a Dirtywave M8 plugged in
+(<code>Codec</code> plus an S24_3LE-only, 44.1 kHz <code>M8</code>). <code>--shots</code> writes the list as
+<code>11b-audio-cards</code>.</p>
+<h3 id="usb-io-is-it-there-and-does-each-output-and-input-work">USB I/O: is it there, and does each output and input work</h3>
+<p>While a USB card is plugged in, MORE has a <strong>USB interface</strong> row: its id,
+and how many channels it plays and records (<code>M8 · 2 ch out · 24 ch in</code>).
+The row appears and goes with the card, and the page says so in its help
+box wherever it is ("USB interface M8 plugged in: 2 ch out, 24 ch in.").
+A on the row opens <strong>USB I/O</strong>:</p>
+<pre><code> USB I/O                                             M8 · plugged in
+ Dirtywave M8 at usb-5101000.usb-1, high speed
+ OUT  S24_3LE · 2 ch · 44.1 kHz         IN  S24_3LE · 24 ch · 44.1 kHz
+   Play through it                                 Yes · playing
+   Test output                                     ◂ Out 1 (left) ▸
+ INPUTS · S24_3LE · 24 ch · 44.1 kHz
+  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮  ▮▮
+ MAIN T1  T2  T3  T4  T5  T6  T7  T8  MOD DLY REV
+</code></pre>
+<ul>
+<li><strong>What it is:</strong> name, and the format, channel counts and rates of each
+  direction, from the card's own stream file (<a href="audio-device.html">audio-device.md</a> §3.3), as AudioOut's choice
+  reads them.</li>
+<li><strong>Play through it:</strong> A makes the card what Plays on chooses. Left goes
+  back to the built-in card, since Automatic would land on the USB card
+  again.</li>
+<li><strong>Test output:</strong> Off, Out 1 (left), Out 2 (right), Outs 1 + 2. The tone is
+  the page's test tone (<code>testtone.h</code>): a steady 440 Hz at -12 dBFS, held by
+  a lease, so leaving the view, the page or the launcher silences it.
+  Testing moves the sound to the card first, because the tone plays where
+  the sound goes. AudioOut plays stereo, so a card's first two outputs are
+  the ones offered.</li>
+<li><strong>Inputs:</strong> a meter on every capture channel, 0 to -60 dBFS, falling at
+  20 dB a second, teal, then amber from -6 dBFS, and orange at full scale.
+  A mark over a meter counts samples at full scale; X clears them. Channels
+  that come in pairs are grouped, named under the pair. An M8 recording 24
+  channels is named in Dirtywave's order (MAIN, T1–T8, MOD, DLY, REV);
+  other cards by number.</li>
+</ul>
+<p>The meters are <code>InputMeter</code> (<code>audioin.h</code>). It opens the card's capture on
+alsa-lib, not SDL, because SDL2 opens only 1, 2, 4, 6 or 8 channels. It
+opens every channel at once, in the card's own format (S24_3LE, S32_LE,
+S24_LE or S16_LE), on <code>hw</code>, so a level read is the level the card sent. It
+is open only while USB I/O is on screen. Pulled out, the view says nothing
+is plugged in and the inputs close; plugged in again, they reopen.
+<code>--fake-audio m8multi</code> and the tests make up levels instead of opening a
+device. <code>--shots</code> writes the view as <code>11c-audio-usb</code>.</p>
+<h3 id="editing-the-mixer">Editing the mixer</h3>
+<p>Every control the card publishes is editable in place, live, and <strong>nothing
+about which controls exist is hardcoded</strong>: a level steps in the card's own
+discrete units, a switch toggles, an enum cycles its own published items.
+Anything moved joins the unit's <code>built_in.mixer</code> list at its new value (a
+level with its range) and is put back at startup from then on (a dot marks
+those), saved as soon as it settles; <code>X</code> drops a control back out of the
+list. A playback level is the playing output's ceiling instead: moved, every
+playback level is kept at once as that output's maximum, and put back
+whenever it plays (<a href="audio-levels.html#maximums">audio-levels.md</a>). The view
+shows PLAYBACK and ROUTING; the switches, and capture and the rest, are
+each behind a row of their own that A opens. A level is drawn as a bar and
+its dB (or percent); the bottom bar gives its number and range, for the
+reason below.</p>
+<p><strong>There is no per-card table of "the controls that matter", and there
+cannot be one.</strong> Seventeen rk817 units with the same codec and the same
+board string behaved three different ways; any curated list would be wrong
+on some unit within a week, and nothing about a board predicts which. What
+ALSA <em>does</em> say on every card is what KIND each control is — <code>pvolume</code>,
+<code>pswitch</code>, <code>penum</code> — and that is all an editor needs. Which ones matter is
+a per-unit fact, established the way every other per-unit fact here is: a
+person listens, and the file remembers. That is what makes an H700, a USB
+DAC or the next clone work with no new code.</p>
+<p>The list stays in the <strong>card's own order</strong> rather than being sorted by
+likely relevance: its other job is to be what you cross-check against
+<code>amixer scontents</code>, and a page that agrees with the tool is worth more than
+one that puts the interesting row first.</p>
+<h3 id="levels-are-discrete-and-shown-that-way">Levels are discrete, and shown that way</h3>
+<p><code>201 (79%)  0:255</code>, not <code>79%</code>. The value and its range <strong>are</strong> the
+granularity — a 0:255 control has 256 positions and a 0:15 one has 16 —
+and which you are on decides whether the next press is a nudge or a jump.</p>
+<p><strong>The fine step is 1</strong>: the device's own granularity, not a fraction of a
+range invented here. <code>Y</code>/<code>A</code> take a coarse step (a sixteenth of the range,
+at least 2) as a concession to a d-pad rather than to the device. Y is west
+and A is east, so the face pair points the same way <code>left</code>/<code>right</code> does.
+The bottom bar names both for the control under the cursor ("◂▸ moves it
+1, Y/A 15 (now 201 of 0:255)."), because how fine the control is
+and how fine you are being with it are two different questions.</p>
+<p>A percentage step was worse than imprecise: 5% of a <code>0 - 15</code> control is
+0.75 units, so it landed back on the integer it started from about half the
+time and <strong>the press did nothing</strong> — invisible to anyone watching a
+percentage, obvious to anyone watching the number. Percent survives in
+parentheses, and as the fallback for a card that publishes no <code>Limits:</code>
+line, where there is no unit to step in.</p>
+<h3 id="two-alsa-details-that-bite-on-real-cards">Two ALSA details that bite on real cards</h3>
+<ul>
+<li><strong>A control with both <code>pvolume</code> and <code>cvolume</code> carries two independent
+  values</strong>, and <code>amixer sset 'Master' 84%</code> sets <em>both</em> — so adjusting
+  output would drag the capture gain along with it (on rk817_ext, playback
+  79% and capture 100% collapsing onto one number). Writes to those name
+  <code>playback</code>. amixer itself applies a value <em>before</em> it reads a direction
+  word after it, so <code>sset 'Master' 84% playback</code> still set both; the
+  in-process <code>sset</code> (<a href="audio-device.html">audio-device.md</a> §1) honors it. An undirected <code>volume</code> is one value
+  serving both, and is written undirected.</li>
+<li><strong><code>amixer</code> cost about 230 ms per call on an RG351V</strong>: a fork, an exec,
+  and an ALSA config parse off slow storage. See <a href="audio-device.html">audio-device.md</a> §1.</li>
+</ul>
+<h2 id="the-maximum-and-the-signal-that-sets-it">The maximum, and the signal that sets it</h2>
+<p>An output's <strong>maximum</strong> is the set of hardware levels it plays at: its
+0 dB. The volume only turns down from it, so nothing an app does goes
+louder.</p>
+<p>It is defined as what a <strong>full-scale</strong> sample produces, so it is set with
+one. Judged with pings at -12 dBFS (as the first ceilings were), an app
+reaching full scale plays 12 dB louder than anything heard while setting
+it: four times the amplitude, sixteen times the power, enough to clip the
+amplifier or rattle the speaker. The SDK clips anything past full scale, so
+full scale is the most the analog stages ever see.</p>
+<p><strong>System levels</strong> is where it is set, by ear: turn on the test sound
+(<strong>pings at 0 dBFS</strong>), open System levels, and the pings play past the user
+level, so what is heard is the ceiling itself. Raise the playback levels
+until it distorts, rattles, or is too loud, and back off; each move is kept
+as it is made. On headphones the pings stay at the user level. MDFourier
+finds it by measurement instead: record it on the line output at each
+setting, the highest that does not clip. It measures these levels, as it
+plays past the user level.</p>
+<h2 id="system-defaults-a-calibrated-boards-preset">System defaults: a calibrated board's preset</h2>
+<p><code>config/audiopresets.json</code>, shipped, holds one entry for each board the team
+has calibrated on our own image: what the set-up by ear concluded there, the
+speaker's maximum from SYSTEM LEVELS, the card's rate and buffer size, and
+the card as it was. A unit an entry applies to starts set up, at those
+levels. It is not offered the set-up by ear, and the first start's bring-up
+never runs on it.</p>
+<p><strong>The match is all or nothing</strong> (<code>audiounit::presetApplies</code>):</p>
+<ul>
+<li>the board's model (<code>/proc/device-tree/model</code>);</li>
+<li>the built-in card's ALSA name: <code>A100 Audio Codec</code>, not its id, which the
+  A100 and H616 codecs share;</li>
+<li>every control of the card: the same ones, each with the same capabilities,
+  range and items. A control the card has and the entry does not is a miss;</li>
+<li>the control the socket is read from, where the set-up follows the plug.</li>
+</ul>
+<p>Any miss, and the unit is as it would be with no file: the log says what
+differed (<code>audio/preset: … does not apply: …</code>). A kernel that renames a
+control or changes its range sends the unit back to the set-up by ear, not
+to a wrong route.</p>
+<p><strong>The unit's own wins, and nothing is copied.</strong> <code>audiounit::load</code> fills in
+from the preset what the unit does not keep for itself: its set-up, the
+built-in card's rate and buffer size, an output's maximum. <code>save</code> writes none
+of it back: a part that equals the preset's is not the unit's own. So an
+entry corrected in a later release reaches every unit that has not changed
+that part. A set-up made by ear on the unit is its own, whatever it
+concluded.</p>
+<p><strong>At every start</strong> (<code>applyStartupMixer</code>), before what the unit keeps by hand
+and the playing output's route and maximum, every level and switch the entry
+holds is put back, only where it differs. A control moved behind the page,
+with <code>amixer</code> or by another program, does not stay moved.</p>
+<p>An entry has no maximum for headphones: a speaker is the board's, headphones
+are not, and the first plug's volume of -18 dB
+(<a href="audio-levels.html#the-value">audio-levels.md</a>) is what covers them.</p>
+<p><strong>Making an entry.</strong> Calibrate the unit: Set up by ear, then SYSTEM LEVELS.
+<code>sndstation --audio-preset</code> prints its entry, from its <code>audio.json</code> and the
+card as read. A person reads it over, fills in who calibrated it and on
+which image, and adds it to the file. The file's own comment has the format.</p>
+<p>The match cannot see a driver that changes what a control does without
+renaming it: the entry still applies, and is wrong. When a card's driver
+changes, its boards are calibrated again.</p>
+<p><strong>Not built yet:</strong> the page saying whether the unit is on its board's
+defaults, and going back to them (#268). Until then, removing the unit's
+entry from <code>audio.json</code> does it.</p>
+<h2 id="kept-audiojson-version-3">Kept: audio.json, version 3</h2>
+<p>The user's <code>~/.config/sndstation/audio.json</code>, one entry per machine, under
+its key: the chip's ID (the SOC ID on ABOUT), else the board model, else
+<code>card:</code> and the built-in card's id. Only that key is read.</p>
+<pre><code class="language-jsonc">{
+  &quot;version&quot;: 3,
+  &quot;RK3326-URKC08010-A599D7394C5B58B6&quot;: {
+    &quot;set_up&quot;: {
+      &quot;when&quot;: &quot;2026-11-05 13:22&quot;,
+      &quot;detect&quot;: &quot;inverted&quot;,                     // normal | inverted | none | mechanical
+      &quot;route_control&quot;: &quot;Playback Mux&quot;,
+      &quot;speaker_switch&quot;: &quot;Internal Speakers&quot;,    // a second control, where there is one
+      &quot;speaker_alone_with_headphones&quot;: false,
+      &quot;routes&quot;: {
+        &quot;speaker&quot;:            { &quot;item&quot;: &quot;HP&quot;,  &quot;speaker_switch&quot;: &quot;on&quot;,  &quot;heard&quot;: true },
+        &quot;headphones&quot;:         { &quot;item&quot;: &quot;SPK&quot;, &quot;speaker_switch&quot;: &quot;off&quot;, &quot;heard&quot;: true },
+        &quot;speaker+headphones&quot;: { &quot;item&quot;: &quot;HP&quot;,  &quot;speaker_switch&quot;: &quot;on&quot;,  &quot;heard&quot;: true },
+        &quot;out&quot;:                { &quot;item&quot;: &quot;HP&quot;,  &quot;speaker_switch&quot;: &quot;on&quot;,  &quot;heard&quot;: true }
+      },
+      &quot;survey&quot;: { ... }                         // what was observed, kept beside it
+    },
+    &quot;plays_on&quot;: &quot;auto&quot;,
+    &quot;built_in&quot;: {                               // one stream: shared by its outputs
+      &quot;rate&quot;: 0, &quot;buffer&quot;: 256,
+      &quot;mixer&quot;: [ { &quot;control&quot;: &quot;Mic Capture Gain&quot;, &quot;value&quot;: 3, &quot;range&quot;: [0, 15] } ],
+      &quot;brought_up&quot;: true
+    },
+    &quot;endpoints&quot;: {
+      &quot;speaker&quot;: { &quot;volume_db&quot;: -6,
+                   &quot;maximum&quot;: [ { &quot;control&quot;: &quot;Master&quot;, &quot;value&quot;: 180, &quot;range&quot;: [0, 255] } ] },
+      &quot;headphones&quot;: { &quot;volume_db&quot;: -21 },
+      &quot;usb:16c0:048a&quot;: { &quot;volume_db&quot;: 0, &quot;rate&quot;: 44100, &quot;buffer&quot;: 256, &quot;raised&quot;: true }
+    }
+  }
+}
+</code></pre>
+<ul>
+<li><strong>Hardware values are native units</strong>: a level's raw number with the range
+  it was read in, a switch's on/off, an enum's item. A level kept in a range
+  the driver no longer reports (a kernel that turned 0:255 into 0:63) is not
+  applied, and says so. The driver's dB is only ever shown, never kept.</li>
+<li><code>volume_db</code> is the software gain, below the maximum: ours, exact.</li>
+<li><strong>Only the set-up by ear writes <code>set_up</code></strong> (and Corrections, by hand). A
+  unit without one is not set up, whatever else it keeps: a mixer edit or a
+  maximum never makes it look set up. Its board's preset, where one applies,
+  sets it up without writing here
+  (<a href="#system-defaults-a-calibrated-boards-preset">above</a>).</li>
+<li>Speaker, headphones and both share one rate and buffer (<code>built_in</code>): one
+  stream, and separate values would reopen it on every plug. A USB or HDMI
+  card keeps its own.</li>
+<li><strong>A file of any other version is deleted when found</strong>, with the <code>device</code>,
+  <code>sample_rate</code> and <code>buffer_frames</code> the old page wrote into the user's
+  <code>system.json</code>, and the unit starts again. Nothing is converted.</li>
+<li>Every save is a patch of the file as it is (<code>audiounit::patch</code>), so two
+  holders of the unit cannot undo each other.</li>
+</ul>
+<p><code>system.json</code> keeps what is the platform's: the output format, dither,
+realtime priority, core, <code>alsa_pcm</code>, and the default rate and buffer size a
+unit has not changed.</p>
+<h2 id="what-alsa-does-and-does-not-promise">What ALSA does and does not promise</h2>
+<ul>
+<li><strong>The raw integer is the firm part</strong>: writing 180 gets the same result
+  every time on the same driver. It need not be the register value.</li>
+<li><strong>dB is metadata the driver author wrote</strong> (TLV): missing on many
+  controls, wrong on some.</li>
+<li><strong>amixer's percent is a third mapping</strong>, linear in the raw range.</li>
+<li><strong>A range can change with the kernel</strong>: hence the range kept beside each
+  level.</li>
+<li>amixer applies a value <strong>before</strong> it reads a direction word after it, so
+  <code>amixer sset 'PCM' 50 playback</code> set the capture level too. <code>mixerio</code>
+  honors the direction
+  (<a href="#two-alsa-details-that-bite-on-real-cards">Two ALSA details</a>, above).</li>
+</ul>
+<h2 id="not-yet-tried-on-a-unit">Not yet tried on a unit</h2>
+<p>Built and tested on the fakes (<code>--fake-audio</code>), SDL's disk driver, and an
+alsa-lib control plugin made to answer like the handhelds' cards (mixerio
+against amixer, byte for byte). Still to try on hardware: the in-process
+mixer on each family, "speaker + headphones" on an rk817_ext and an H700,
+SYSTEM LEVELS' full-scale pings on a speaker, the startup apply on a
+unit with a chip ID, and a board's preset on a unit (<code>test_audiopreset</code>
+checks it on the H616 fake).</p>
+    <p class="foot">From <code>docs/audio-page.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

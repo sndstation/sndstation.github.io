@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Device events · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html" aria-current="page">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="device-events">Device events</h1>
+<p><code>&lt;sndstation/deviceevents.h&gt;</code> reports what the unit's body says about
+itself: a clamshell's lid, the headphone and line-out sockets, a
+tablet-mode or rotate-lock switch, and an accelerometer or gyro if it has
+one. SDL's gamepad API never sees any of it,
+so the SDK reads it from the kernel directly.</p>
+<p>It uses no SDL and no threads, and it never grabs a device. The app calls
+<code>poll()</code> once a frame from its own loop, and logind and everything else
+watching the same nodes keep seeing them.</p>
+<h2 id="the-usual-app">The usual app</h2>
+<pre><code class="language-cpp">sndstation::DeviceEvents dev;
+dev.open();                                // /dev/input, and the hallkey door if profiled
+if (dev.has(sndstation::Switch::Lid)) { /* offer the LID input */ }
+
+// once a frame
+for (const sndstation::DeviceEvent&amp; e : dev.poll()) {
+    if (e.sw == sndstation::Switch::Lid)
+        lidClosed(e.on);                   // on = closed
+}
+</code></pre>
+<p><code>poll()</code> doesn't block. It drains every node, then returns each switch
+whose state differs from the last call. A switch that flips and flips back
+within one call is no change: the app only learns where it ended up.
+<code>on(Switch)</code> is the state now. A switch carried by two nodes counts as on
+while either holds it. <code>timestamp_ns</code> is CLOCK_MONOTONIC, which does not
+advance across a system suspend.</p>
+<p>The open itself is not news: <code>poll()</code> reports changes from then on. A node
+that arrives later by hotplug is news, and its switches that are on are
+reported.</p>
+<p><code>Switch</code>'s values are the kernel's own <code>SW_*</code> codes, so the mapping is a
+cast. <code>switchName()</code> gives <code>"lid"</code>, <code>"headphones"</code> and so on for logs.</p>
+<h2 id="where-a-switch-can-come-from">Where a switch can come from</h2>
+<p>Every door that was tried is kept in <code>scanned()</code>, the way the audio
+socket's scan is (<code>SocketSource</code>). A unit that reports nothing can still say
+where it looked.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>kind</th>
+<th>where</th>
+<th>what it said</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>evdev</code></td>
+<td><code>/dev/input/event3</code></td>
+<td><code>lid</code>, <code>headphones (on: headphones)</code>, <code>no switches</code>, an errno</td>
+</tr>
+<tr>
+<td><code>hotplug</code></td>
+<td><code>/dev/input</code></td>
+<td><code>watching for nodes coming and going (inotify)</code>, or why not</td>
+</tr>
+<tr>
+<td><code>hallkey</code></td>
+<td>a sysfs path</td>
+<td><code>reads 1, closed reads 0</code>, <code>unreadable</code>, <code>not configured</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="evdev">evdev</h3>
+<p>Every <code>/dev/input/event*</code> that advertises any <code>EV_SW</code> bit is kept open.
+Nodes are found by capability, never by number, since the numbers move with
+probe order, and are scanned in event-number order, so the report is
+repeatable.</p>
+<ul>
+<li><strong>Initial state</strong> comes from <code>EVIOCGSW</code>, not from waiting for an event: a
+  switch that nobody is moving emits nothing.</li>
+<li><strong><code>SYN_DROPPED</code></strong> means the kernel's buffer overflowed. As the kernel
+  documents, everything up to the next <code>SYN_REPORT</code> is skipped, and then the
+  state is asked for outright.</li>
+<li><strong>Permission:</strong> <code>/dev/input/event*</code> is <code>root:input 0660</code> once udev has
+  run, so the user has to be in <code>input</code>. A refused node is a row with
+  <code>Permission denied (is the user in the input group?)</code>.</li>
+</ul>
+<h3 id="hotplug">Hotplug</h3>
+<p><code>open()</code> starts an inotify watch on the input directory. <code>poll()</code> drains it
+before reading anything.</p>
+<ul>
+<li><strong>A new node</strong> with switches is opened and added. The watch includes
+  <code>IN_ATTRIB</code>, because udev creates a node root-only and opens it up a
+  moment later. A first refusal is followed by a second try that works.</li>
+<li><strong>A removed node</strong>, or one whose read fails with <code>ENODEV</code>, is dropped, and
+  any switch it was holding on reports off.</li>
+</ul>
+<p>Both are recorded in <code>scanned()</code>, one row per node saying what happened
+last, so a dock that comes and goes doesn't grow the list. Units with only
+built-in switches behave the same as with a single scan at <code>open()</code>.</p>
+<h3 id="hallkey-profiled-never-guessed">hallkey: profiled, never guessed</h3>
+<p>The Allwinner BSP kernels that the stock Anbernic images ship report the
+RG35XX SP's lid as a <code>hallkey</code> attribute under <code>/sys/class/power_supply</code>,
+not through evdev. The door's code lives here. Which node to read and which
+value means closed come from the unit's entry in the platform's
+<code>deviceevents.json</code>, never from code:</p>
+<pre><code class="language-json">&quot;Anbernic RG35XX SP&quot;: {
+  &quot;hallkey&quot;: { &quot;node&quot;: &quot;axp2202-battery&quot;, &quot;closed&quot;: 0 }
+}
+</code></pre>
+<p>The file is keyed and merged like <code>leds.json</code>: <code>"*"</code>, then the board model,
+then the unit id, widest first. <code>node</code> is a power_supply node's name or an
+absolute path. Both fields are needed. <strong>A unit with no entry never tries
+the door</strong>, so the polarity is never guessed on hardware nobody has
+measured, and <code>scanned()</code> lists it as <code>not configured</code>. The file ships
+empty: the SP on the sndstation rootfs runs a mainline kernel, and its lid
+is evdev <code>gpio-keys-lid</code> (value 1 = closed), with no hallkey at all.</p>
+<p><code>hallkeyFromProfile()</code> is that lookup through <code>appcfg::platform</code>.
+<code>hallkeyFor(json, board, unit)</code> is the same thing on a file already read.</p>
+<h2 id="motion-the-accelerometer-the-gyro-and-which-edge-is-up">Motion: the accelerometer, the gyro, and which edge is up</h2>
+<p>Motion is the second kind of source. It is read as state, not reported as
+events: an accelerometer changes every frame, and the app wants the latest
+reading.</p>
+<pre><code class="language-cpp">if (dev.hasMotion(sndstation::Motion::Accelerometer)) {
+    sndstation::MotionSample a = dev.motion(sndstation::Motion::Accelerometer);
+    // a.x, a.y, a.z in m/s^2; dev.motion(Motion::Gyroscope) in rad/s
+    if (dev.orientation() != lastOrientation) { /* turned */ }
+}
+</code></pre>
+<p><code>open()</code> scans <code>/sys/bus/iio/devices</code>. Every <code>iio:device*</code> with
+<code>in_accel_{x,y,z}_raw</code> or <code>in_anglvel_{x,y,z}_raw</code> is a sensor, and every
+<code>poll()</code> takes one reading per kind, from the first sensor of that kind
+that reads.</p>
+<ul>
+<li><strong>Units:</strong> each axis is <code>(raw + offset) * scale</code>. The per-axis
+  <code>_x_scale</code>/<code>_x_offset</code> is used before the shared <code>_scale</code>/<code>_offset</code>. The
+  IIO ABI makes this m/s² for accelerometers and rad/s for gyros.</li>
+<li><strong>The unit's own axes:</strong> x to the right, y up the panel, z out of it.
+  The sensor's <code>in_accel_mount_matrix</code> (or <code>mount_matrix</code>) turns its
+  readings into them, so a chip soldered on a quarter turn round reads the
+  same as one that isn't. Lying flat and face up, a unit reads z ≈ +9.8.</li>
+<li><strong><code>orientation()</code>:</strong> which edge is up (<code>Up</code>, <code>Left</code>, <code>Right</code>, <code>Down</code>), or
+  <code>Flat</code>, worked out from the accelerometer.</li>
+<li>An edge counts once it is within 35° of vertical, and <code>Flat</code> within 35°
+    of face up or down. Between those, the previous answer stands, so a unit
+    held at 45° doesn't flicker.</li>
+<li>A reading too weak to show gravity (falling, shaken) changes nothing.</li>
+<li><code>orientationOf(x, y, z, previous)</code> is the same rule as a pure function.</li>
+</ul>
+<p>Each IIO device is a row in <code>scanned()</code> (kind <code>iio</code>), with its name,
+scale and mount matrix. A device without motion channels, such as a
+battery ADC, says <code>no motion channels</code>.</p>
+<p>Not yet: nothing drives <code>display.rotate</code> from orientation, and how the
+RG Rotate reports its rotation hasn't been looked at. The test hook is
+<code>addIio(dir)</code>, which the test points at a fake IIO tree.</p>
+<h2 id="the-lid-policy-what-closing-the-lid-does">The lid policy: what closing the lid does</h2>
+<p>What a shut lid does is the platform's setting, shared by every app on the
+unit, in <code>system.json</code>:</p>
+<pre><code class="language-json">&quot;system&quot;: { &quot;lid&quot;: &quot;suspend&quot; }
+</code></pre>
+<div class="table"><table>
+<thead>
+<tr>
+<th>value</th>
+<th>the unit</th>
+<th>the app</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"suspend"</code> (shipped)</td>
+<td>sleeps when the lid shuts and wakes when it opens. This is logind's own default.</td>
+<td>gets the Lid event a moment before the freeze. On the SP that window was about 3.6 s, measured, so it should only get ready (stop the audio, darken the lights).</td>
+</tr>
+<tr>
+<td><code>"keep-playing"</code></td>
+<td>stays awake</td>
+<td>keeps playing, and may blank the panel</td>
+</tr>
+<tr>
+<td><code>"off"</code></td>
+<td>stays awake</td>
+<td>takes no notice of the lid</td>
+</tr>
+</tbody>
+</table></div>
+<p>Any other value reads as <code>"suspend"</code>, with a warning on stderr, so a typo
+can't leave a unit awake in a bag.</p>
+<p><strong>An app never suspends the unit itself.</strong> logind does the suspending, and
+the platform tells logind what to do:</p>
+<ol>
+<li>At boot, <code>sndstation-lid.service</code> runs before <code>systemd-logind</code>. It's a
+   oneshot, linked into <code>/etc/systemd/system</code> on a handheld by the package.</li>
+<li>It runs <code>sndstation-lid-apply</code>. That runs <code>sndstation --logind-lid</code> as
+   the user tty1 logs in, so the user's <code>~/.config/sndstation/system.json</code>
+   is merged over the shipped one. With no such user, it uses the shipped
+   policy alone.</li>
+<li>The launcher prints a logind drop-in and exits before touching the
+   display. <code>sndstation-lid-apply</code> writes it to
+   <code>/etc/systemd/logind.conf.d/sndstation-lid.conf</code>:</li>
+</ol>
+<p><code>ini
+   [Login]
+   HandleLidSwitch=suspend              # ignore for keep-playing and off
+   HandleLidSwitchExternalPower=suspend # likewise
+   HandleLidSwitchDocked=ignore         # logind's default, whatever the policy</code></p>
+<p>It replaces only a drop-in that carries its own marker line. One that
+   someone else wrote is left alone, and the script says so.
+4. logind starts and reads it.</p>
+<p><strong>A change applies from the next boot.</strong> logind is never restarted under a
+running session. <code>sndstation-lid-apply --print</code> shows what would be
+written. Removing the package removes the unit, its link and the drop-in.</p>
+<p>In code: <code>lidPolicy()</code> reads the merged setting, <code>lidPolicyFrom(json)</code> does
+the same on a file already read, <code>lidPolicyName()</code> gives the string, and
+<code>logindLidDropIn(policy)</code> gives the drop-in text.</p>
+<h2 id="who-else-reads-it">Who else reads it</h2>
+<p>The audio socket's input door (<code>audiodev::readSocket()</code>, see
+<a href="audio-device.html#4-where-plug-detection-is-read-four-doors">audio-device.md §4</a>)
+does a one-shot scan: <code>open(dir, psDir, HallkeyConfig{}, false)</code>, with no
+hallkey and no hotplug watch. It takes its answer from the rows. Each row
+carries <code>has</code> and <code>on</code> (the switches the door carries and which are on,
+kept current by <code>poll()</code>) and <code>error</code> (the errno when it couldn't be
+opened), so a consumer never parses <code>note</code>.</p>
+<h2 id="proposal-events-not-polling-for-discussion">Proposal: events, not polling (for discussion)</h2>
+<p>Not built. Today the app calls <code>poll()</code> once a frame, as above. This is
+how the SDK could tell every program about switches, cards, the battery and
+the network without anyone polling, and it is what the system volume in
+<a href="audio-levels.html"><code>audio-levels.md</code></a> needs to follow a headphone plug while
+an app runs (today it follows a card change, and an app can call
+<code>AudioOut::refreshEndpoint()</code>).</p>
+<p>The SDK already has the pieces. They are apart, and two of them poll:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lid, headphone and line-out sockets, other switches</td>
+<td><code>DeviceEvents::poll()</code>, called by the program once a frame. No program calls it yet</td>
+</tr>
+<tr>
+<td>battery</td>
+<td><code>sysfacts::readBattery()</code>, re-read by each program on a timer of its own (the launcher: every 30 s)</td>
+</tr>
+<tr>
+<td>the card played to (a USB interface coming or going)</td>
+<td><code>AudioOut::service()</code>, which reads <code>/proc/asound</code> every half second</td>
+</tr>
+<tr>
+<td>network</td>
+<td>the launcher's alone</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every one of these has a kernel source that wakes a reader when, and only
+when, something changes:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Woken by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>switches</td>
+<td>the evdev nodes <code>DeviceEvents</code> already holds open, and inotify for nodes coming and going (already there)</td>
+</tr>
+<tr>
+<td>a socket whose only detect is an ALSA control</td>
+<td>ALSA control events (<code>snd_ctl_subscribe_events</code> on <code>/dev/snd/controlC*</code>, alsa-lib, already linked for MIDI). No amixer, no polling</td>
+</tr>
+<tr>
+<td>cards coming and going</td>
+<td>the kernel's uevent netlink socket (<code>sound</code> subsystem)</td>
+</tr>
+<tr>
+<td>battery: charging, full, plugged</td>
+<td>the same uevent socket (<code>power_supply</code> change events)</td>
+</tr>
+<tr>
+<td>network</td>
+<td>rtnetlink: links and addresses</td>
+</tr>
+</tbody>
+</table></div>
+<p>So:</p>
+<ul>
+<li><strong>One SDK thread sleeps in <code>epoll_wait</code> on all of them.</strong> While nothing
+  happens it costs nothing: it does not run, and it has no timer.</li>
+<li><strong>What it learns arrives as an SDL event</strong>, in the event loop every app
+  already has, beside a gamepad being plugged in. That is one event type,
+  registered once (<code>SDL_RegisterEvents</code>), with the kind in <code>user.code</code>:
+  Switch, Battery, Audio, Network. An app that ignores the type is unchanged.
+  It is an event, not a callback, so the app decides when to act: it
+  handles the event where its loop gets to it, on its own thread. A
+  callback would run app code on the SDK's thread, and every app would
+  need locks for it.</li>
+<li><strong>It does the platform's part first</strong>:</li>
+<li>on a headphone plug, the profile's route and mute (one amixer fork, on
+    a plug only, and never on the audio thread);</li>
+<li>on a card coming or going, <code>AudioOut</code>'s move to it;</li>
+<li>in both cases, the switch of endpoint and volume.</li>
+</ul>
+<p>Then it posts the event. An app that leaves the volume to the SDK needs
+  to do nothing at all. An app that shows the volume, or wants to fade
+  rather than jump, looks at the Audio event.
+- <strong><code>DeviceEvents::poll()</code> and <code>AudioOut::service()</code> stay</strong>, as no-ops
+  once the thread runs, so a program that calls them today keeps working.</p>
+<p><strong>The one thing the kernel does not announce everywhere</strong> is the battery
+percentage: some fuel gauges send a change event as it drops, others only
+on charging and full. On those, "low" can only be found by reading
+<code>capacity</code>, and the question is how rarely (question 2 below).</p>
+<h3 id="open-questions">Open questions</h3>
+<ol>
+<li><strong>The thread in each SDK program, or one platform process</strong> that
+   sleeps on the same sources for every program? Either costs nothing
+   while nothing happens. The process also covers ports and programs
+   outside the SDK, but it is one more thing beside a real-time app, and
+   it still has to tell the app.</li>
+<li><strong>Battery percentage on a gauge that sends no change event</strong>: read
+   <code>capacity</code> how rarely, or only report charging, full and plugged?</li>
+</ol>
+<h2 id="other-operating-systems">Other operating systems</h2>
+<p>Evdev and inotify are Linux's (<code>src/deviceevents_linux.cpp</code>). Any other
+build gets <code>src/deviceevents_null.cpp</code>, the way MIDI has <code>midi_null.cpp</code>.
+There, only the hallkey door can answer, and <code>scanned()</code> says
+<code>no evdev on this OS</code>.</p>
+<h2 id="testing-without-a-unit">Testing without a unit</h2>
+<p><code>tests/test_deviceevents.cpp</code> needs no hardware:</p>
+<ul>
+<li><strong>Pipes</strong> stand in for evdev nodes, through <code>addEvdevFd(fd, has, onNow,
+  name)</code>. The test writes <code>struct input_event</code> records into them.</li>
+<li><strong><code>setEvdevOps({probe, state})</code></strong> swaps out the ioctls, so a FIFO in a
+  temp directory passes for a node. That's how hotplug add and remove run in
+  a temp dir standing in for <code>/dev/input</code>, and how <code>SYN_DROPPED</code> gets its
+  re-read.</li>
+<li><strong>A fake <code>power_supply</code></strong> directory drives the hallkey door, configured
+  and not, through <code>open(..., HallkeyConfig)</code> and <code>addHallkey(path,
+  closedValue)</code>.</li>
+</ul>
+    <p class="foot">From <code>docs/device-events.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

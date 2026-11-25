@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The sndstation launcher and session · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html" aria-current="page">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="the-sndstation-launcher-and-session">The sndstation launcher and session</h1>
+<p><code>sndstation</code> is the first thing on screen once the OS is up. It lists the
+installed apps and starts the one you pick. <code>sndstation-session</code> runs it
+in a loop: when the app exits, the launcher comes back. "Exit to shell"
+ends the loop. Both ship in the <code>sndstation</code> package and are built from
+<code>sndstation/launcher/</code> and <code>sndstation/session/</code> on the public SDK
+alone.</p>
+<h2 id="how-an-app-is-started">How an app is started</h2>
+<p>The launcher <strong>replaces itself</strong> with the app. It shuts SDL down (display,
+joystick, audio) and then <code>exec</code>s the app's program. So:</p>
+<ul>
+<li>the app gets all of the memory and every device;</li>
+<li>an app that crashes leaves no launcher half-alive behind it;</li>
+<li>the session loop, not the launcher, is what brings the list back.</li>
+</ul>
+<p>The app runs with <code>SNDSTATION_SESSION=1</code> in its environment. An app may
+use it to say "back" rather than "quit".</p>
+<p>Which platform is installed is in a file, not the environment:
+<code>/usr/share/sndstation/version</code> holds its version on one line (<code>0.17.1</code>).
+The package ships it, so any program can read it, started by the launcher
+or not, and it is never out of date after an upgrade.</p>
+<h2 id="listing-an-app-the-manifest">Listing an app: the manifest</h2>
+<p>One file per app, <code>&lt;id&gt;.json</code>, in any of these directories (later ones
+override earlier ones with the same id):</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>directory</th>
+<th>who puts it there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/usr/share/sndstation/apps</code></td>
+<td>the app's package</td>
+</tr>
+<tr>
+<td><code>~/.local/share/sndstation/apps</code></td>
+<td>you: your own entries, or overrides</td>
+</tr>
+<tr>
+<td><code>$SNDSTATION_APPS</code> (colon-separated), <code>--apps DIR</code></td>
+<td>development</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-jsonc">{
+  &quot;name&quot;:        &quot;Example&quot;,                         // required
+  &quot;description&quot;: &quot;What it is, in a line&quot;,
+  &quot;exec&quot;:        [&quot;/opt/example/example&quot;],          // required: argv, no shell
+  &quot;order&quot;:       10,                                // optional, low first
+  &quot;skin&quot;:        &quot;system&quot;                           // optional: wear the unit's skin
+}
+</code></pre>
+<ul>
+<li>
+<p><strong><code>skin</code></strong>: <code>"system"</code> starts the app in the skin chosen in Display
+  (below), a skin's id in that one. The launcher hands it over as
+  <code>SNDSTATION_SKIN</code>; the app's own style goes over it. Without it, an app
+  has its own look (<span>sdk-style.md</span>).</p>
+</li>
+<li>
+<p><strong><code>exec</code></strong> runs as given: no shell, and an absolute path is not looked
+  up on <code>$PATH</code>.</p>
+</li>
+<li><strong>A program that is not there</strong> (or not executable) is still listed,
+  grayed out with the reason. A broken install says so instead of
+  vanishing.</li>
+<li><strong>Only apps with a manifest are listed.</strong> A manifest without <code>name</code> or
+  <code>exec</code> is skipped, with a line on stderr.</li>
+<li><strong>The list is read when the launcher starts</strong>, and the launcher is a
+  new process after every app, so coming back from one always reads it
+  afresh. For something installed or removed while the launcher sat on
+  the list (a port added over SSH, say), X (North) rescans. Nothing reads
+  it on a timer: the unit is an audio device, and an idle launcher does
+  nothing but keep its sound stream, which the screensaver lets go of. Starting an app reads the list once more first, so one removed
+  a moment ago is not started, and neither is whatever the cursor lands
+  on in its place.</li>
+</ul>
+<p>An app's package installs its manifest into <code>/usr/share/sndstation/apps</code>.</p>
+<h2 id="the-session">The session</h2>
+<p><code>sndstation-session</code> loops on the launcher. What each run returns says how
+it ended:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>exit</th>
+<th>means</th>
+<th>the session</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>87</td>
+<td>"Exit to shell"</td>
+<td>ends; the shell that ran it carries on</td>
+</tr>
+<tr>
+<td>anything else</td>
+<td>the app, or the launcher, ended</td>
+<td>starts the launcher again</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three failing runs in a row, each under five seconds, also end the session.
+That catches a launcher that cannot start (no display, a broken install),
+which would otherwise flicker forever. The session says so and leaves you a
+shell.</p>
+<p>Arguments are passed to every launcher run. <code>SNDSTATION_LAUNCHER</code>
+overrides which program it runs.</p>
+<h3 id="booting-into-it">Booting into it</h3>
+<p>On a handheld, <strong>the sndstation package sets this up when it installs</strong>,
+as part of the handheld half it already links into <code>/etc</code> (the realtime
+allowance, the LED rule). The unit's own screen then boots into the
+launcher:</p>
+<ul>
+<li><strong><code>/etc/profile.d/sndstation-session.sh</code></strong> is linked to
+  <code>sndstation/session/profile.sh</code>. A login on <strong>tty1</strong> runs
+  <code>sndstation-session</code>, once. SSH, a serial console or any other terminal
+  is an ordinary shell. Because it is a real login, <code>pam_limits</code> applies,
+  so the audio thread gets its realtime allowance.</li>
+<li><strong><code>/etc/systemd/system/getty@tty1.service.d/sndstation-autologin.conf</code></strong>
+  is written to log tty1 in automatically. It names a user, so it is
+  written rather than shipped, and it carries a marker line so the package
+  only ever removes its own.</li>
+<li><strong><code>/etc/systemd/system/sndstation-lid.service</code></strong> applies the lid
+  policy, <code>system.json</code>'s <code>"system": {"lid"}</code>, to logind at boot. It
+  writes <code>/etc/systemd/logind.conf.d/sndstation-lid.conf</code> from the tty1
+  user's setting, so a change takes effect from the next boot. See
+  <a href="device-events.html#the-lid-policy-what-closing-the-lid-does">device-events.md</a>.</li>
+<li><strong>"Exit to shell"</strong> ends the session, and that login carries on to a
+  normal prompt. Logging out of the prompt logs in again, and the launcher
+  comes back.</li>
+</ul>
+<p>Whose login it is: <code>SNDSTATION_USER</code> if given at install time, else
+whoever ran <code>sudo</code>, else the first ordinary account (uid 1000 and up, with a
+shell). The script says which, and says if that user is missing from
+<code>audio</code>, <code>video</code> or <code>input</code>.</p>
+<p>Nothing changes until the next boot: the install never restarts tty1 under
+whoever is using it. Nobody's <code>~/.profile</code> is edited.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>at install time</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SNDSTATION_BOOT=no</code></td>
+<td>leave tty1 alone, and remove what an earlier install set up. Remembered (<code>/etc/sndstation/boot</code>) through upgrades, until…</td>
+</tr>
+<tr>
+<td><code>SNDSTATION_BOOT=yes</code></td>
+<td>…this turns it back on</td>
+</tr>
+<tr>
+<td><code>SNDSTATION_USER=&lt;name&gt;</code></td>
+<td>log this user in</td>
+</tr>
+<tr>
+<td><code>SNDSTATION_SYSTEM=no</code></td>
+<td>no handheld half at all (this included)</td>
+</tr>
+</tbody>
+</table></div>
+<p>An autologin drop-in of the same name that the package did not write is
+left alone, and the script says so. Without systemd, the profile link is
+still made; logging the user in on tty1 is then up to the image. Removing
+the package removes both. Purging it also forgets the yes/no.</p>
+<h3 id="bluetooth-at-boot">Bluetooth at boot</h3>
+<p>The RG35XX SP and the other H700 units with a Realtek RTL8821CS have their
+Bluetooth on a UART, spoken to over the Three-wire (H5) protocol. On about
+half of all boots the chip never answers the link's SYNC. The driver binds
+and logs nothing more; no <code>hci0</code> appears, so bluetoothd never starts, and
+paired controllers (a BLE-MIDI keyboard, say) stay away until a lucky boot.
+Measured on an SP (Debian 13, kernel 7.2): 4 boots of 8 came up this way.
+Rebinding the driver powers the chip down and up through its enable GPIO,
+and it then answers at once.</p>
+<p>The handheld half does that for you:
+<code>/etc/systemd/system/sndstation-bt-h5.service</code> is linked to
+<code>sndstation/system/sndstation-bt-h5.service</code> and enabled. At boot it runs
+<code>/usr/share/sndstation/system/sndstation-bt-h5</code>, which waits for each device
+the <code>hci_uart_h5</code> driver has bound and, if no hci device appears within six
+seconds, rebinds it, up to three times. When <code>hci0</code> registers, udev starts
+bluetoothd as usual. A unit without an H5 controller finds none and the
+service exits. What it did is in <code>journalctl -u sndstation-bt-h5</code>.</p>
+<p>By hand, as root, the same thing is:</p>
+<pre><code class="language-sh">echo serial0-0 &gt; /sys/bus/serial/drivers/hci_uart_h5/unbind
+echo serial0-0 &gt; /sys/bus/serial/drivers/hci_uart_h5/bind
+</code></pre>
+<p>On a desktop none of this happens. To try the session there, run
+<code>sndstation-session</code> by hand.</p>
+<h2 id="controls">Controls</h2>
+<p>SETTINGS → <strong>Controls</strong> sets up the unit's gamepad for every app
+(<code>launcher/controls.cpp</code>):</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Test buttons</td>
+<td>press anything: its pill lights. The map, end to end, with the raw SDL source and every axis live. START three times leaves.</td>
+</tr>
+<tr>
+<td>Map this controller</td>
+<td>the wizard. Each control is haloed in turn; press its button <strong>twice</strong> to confirm, hold any button 1.5 s to skip it (or keep what it was), and a hat d-pad is taken whole. It edits the pad's existing entry rather than relearning it, and saves into <code>~/.config/sndstation/gamepads.json</code>, live at once.</td>
+</tr>
+<tr>
+<td>Calibrate sticks</td>
+<td>ranges (swirl both sticks), swapping the two sticks (units of one model wire them either way round), and per-stick inversion and X/Y swap, into <code>calibration.json</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The wizard reads <strong>raw</strong> button numbers, not the pad's logical bits: an
+unknown pad runs on the generic fallback map, whose bits are guesses.</p>
+<p><strong>One pad is in use at a time:</strong> the first one SDL reports. Another pad
+plugged in alongside is ignored entirely, buttons, hat and sticks, until the
+one in use is unplugged; then the next one still connected takes over, on
+its own map and calibration. (Its presses used to be read through the first
+pad's map.)</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A or START</td>
+<td>pause the log, or resume it. Lights and counts carry on while it is paused</td>
+</tr>
+<tr>
+<td>X</td>
+<td>clear the log and the counts</td>
+</tr>
+<tr>
+<td>Y</td>
+<td>hide or show timing clock and active sensing. Hidden by default</td>
+</tr>
+<tr>
+<td>UP / DOWN, L1 / R1</td>
+<td>scroll back a line or ten (pauses), and forward again</td>
+</tr>
+<tr>
+<td>B</td>
+<td>back to the Controls menu</td>
+</tr>
+</tbody>
+</table></div>
+<p>On a desktop's keyboard: A is Z or A, START is Return, X is Space or C, Y is
+V, L1 and R1 are 1 and 4, and B is X or D.</p>
+<h3 id="no-gamepad-at-all">No gamepad at all</h3>
+<p>Before anything else, after the boot logo (the session's first launcher)
+or on a handheld's screen: with <strong>no gamepad</strong> half a second in, the
+launcher says "No gamepad found" and counts five seconds down, then leaves
+to the shell (exit 87, as Exit to shell), where a keyboard or ssh can
+find out why: a driver that failed, a device tree without the pad. A pad
+that arrives meanwhile, or any key on a keyboard, ends it and the launcher
+carries on, the pad's own first run next. A launcher started by hand on a
+desktop has the keyboard, and never shows it.</p>
+<h3 id="first-run">First run</h3>
+<p>When the unit's pad is <strong>not in the gamepad database</strong>, Controls opens by
+itself before the list, on a card:</p>
+<ul>
+<li><strong>press any button twice</strong> to map it (the wizard, then the tester);</li>
+<li><strong>hold any button for three seconds</strong> to skip it. It still runs on the
+  fallback map, and it is not asked about again
+  (<code>~/.config/sndstation/setup.json</code>, <code>pads_skipped</code>). Controls maps it
+  any time later.</li>
+</ul>
+<p>A pad already in the database is never asked about.</p>
+<h2 id="audio">Audio</h2>
+<p>SETTINGS → <strong>Audio</strong> sets up the unit's sound for every app
+(<code>launcher/audiosetup.cpp</code>).
+Everything is set and tested here once, and every app follows it: the page
+edits what the unit keeps (<code>audio.json</code>, version 3, per unit and per
+endpoint) and its own sound output applies it, by the same SDK functions
+every app opens its sound through. <a href="audio-page.html"><code>audio-page.md</code></a> has the
+model and why.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device</td>
+<td>Automatic (a USB interface when plugged in; else the headphones when in and the unit can tell; else the speaker; HDMI only when chosen), or one output: speaker, headphones, speaker + headphones where the board can, a USB interface, HDMI. Something always plays: a chosen output that goes away falls back to Automatic</td>
+</tr>
+<tr>
+<td>Sample rate, Buffer size</td>
+<td>the playing card's, live, offering only what the device answered when asked; kept per card. The buffer size is a slider, with its length in ms</td>
+</tr>
+<tr>
+<td>User level</td>
+<td>the playing output's system volume, a gain on the samples in software, in dB below its system levels, shared by every program (<a href="audio-levels.html">audio-levels.md</a>)</td>
+</tr>
+<tr>
+<td>System levels</td>
+<td>the chip's controls; its playback levels are the playing output's ceiling, kept as they move; nothing else sets it. PLAYBACK and ROUTING shown; switches, and capture and the rest, each behind a row A opens</td>
+</tr>
+<tr>
+<td>Test sound</td>
+<td>pings peaking at full scale, at the volume (as loud as an app can play at this volume), or a steady 440 Hz at -12 dBFS</td>
+</tr>
+<tr>
+<td>OUTPUTS</td>
+<td>one row per output this unit has; A opens it: its user level, Play on it, and for the built-in card <strong>Set up by ear</strong> and <strong>Corrections</strong> (plug detection, swap, speaker switch)</td>
+</tr>
+<tr>
+<td>TOOLS</td>
+<td>USB interface (while one is plugged in: <a href="audio-page.html#usb-io-is-it-there-and-does-each-output-and-input-work">audio-page.md</a>), Diagnostics, MDFourier (<a href="audio-device.html">audio-device.md §2.4</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>System levels</strong> with the test sound on plays pings at full scale (0 dBFS,
+past the user level; at it on headphones), over the card's playback levels:
+raise them until it distorts, rattles or is too loud, and back off. Each
+move is kept as that output's maximum, its 0 dB.</p>
+<p><strong>Every change is kept as it is made</strong>, into <code>~/.config/sndstation/audio.json</code>,
+and "✓ Saved" shows in the title bar for a moment. The by-ear set-up is the
+exception: its answers are kept when its DONE screen says SAVE, and a run
+abandoned part way leaves the unit as it was. A unit nobody has set up has
+nothing routed: only Automatic, Built in and any other card are offered.</p>
+<p>The page plays into <strong>the launcher's stream</strong> (<code>launcher/audio.h</code>), which
+the launcher opens when it starts and keeps: the page's test sounds join it
+when the page opens and fade out when it closes, and the page is the one
+place that reopens it (a card, a rate, a buffer size). The stream is let go
+of for the hand-over to an app, the screensaver and sleep
+(<a href="audio-stack.html">audio-stack.md</a>).</p>
+<p>The launcher also applies the unit's kept levels and its output's route and
+maximum each time it starts (<code>audiodev::applyStartupMixer</code>), for programs
+that do not open their sound through the SDK.</p>
+<p><strong>Vol+ and Vol-</strong> step the system volume on every launcher page but
+CONTROLS, which tests the keys: the volume of the output a program would
+play on now, 1.5 dB a press, saved at once so the next program starts
+there. An overlay says which output and how loud. AUDIO and the game step
+their own stream's, the same volume.</p>
+<p>The detail — the survey behind the wizard, the profile schema, why the
+test signal holds no state: <strong><a href="audio-device.html"><code>audio-device.md</code></a></strong>.</p>
+<h3 id="first-run-1">First run</h3>
+<p>After the gamepad's first run, a <strong>handheld</strong> whose unit is not set up
+gets a card before the list: A sets it up by ear (the wizard,
+then the page), B skips it. A skip is remembered for the unit
+(<code>setup.json</code>, <code>audio_skipped</code>); Audio sets it up any time later. A
+handheld is a device tree and a card with a speaker/headphone route to
+choose — a desktop is never asked, and its system decides where sound goes.
+A card with no mux but a switch named for the speaker counts too, as a
+two-item route, on and off, when the socket gives a signal to follow: the
+H616 codec in the RG40XX H reports the jack and leaves the speaker on, so
+that switch is its whole routing (<code>--fake-audio h616</code>).</p>
+<h2 id="midi">MIDI</h2>
+<p>Under Settings, <strong>MIDI</strong> chooses which MIDI ports every app uses
+(<code>launcher/midisettings.cpp</code>):</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MIDI in</td>
+<td>all ports, or none; a list of named ports set in <code>system.json</code> is kept as a third choice</td>
+</tr>
+<tr>
+<td>MIDI out</td>
+<td>none, or all ports</td>
+</tr>
+<tr>
+<td>MIDI controllers ›</td>
+<td>pairs a BLE-MIDI keyboard or pad over Bluetooth; right or A opens <a href="#bluetooth">Network's MIDI controllers list</a>, B comes back here</td>
+</tr>
+<tr>
+<td>MIDI monitor ›</td>
+<td>every MIDI port, and what arrives on each input; right or A opens it, B comes back (below)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Up and down choose a row, left and right change it. Each change is saved at
+once into <code>~/.config/sndstation/system.json</code>, only the key it changes, and
+apps read it when they next start.</p>
+<h3 id="midi-monitor">MIDI monitor</h3>
+<p><strong>MIDI monitor</strong>, on the MIDI page, shows the unit's MIDI devices and
+everything they send (<code>sndstation/launcher/midimon.cpp</code>, on
+<a href="midi.html">midi.h</a>):</p>
+<ul>
+<li><strong>Ports:</strong> every port <code>midi::ports()</code> lists, inputs and outputs, with
+  in/out, MIDI 1.0 or 2.0, and the tier the backend is on. The list is read
+  again when a device comes or goes: on <code>Sink::portsChanged</code>, or every two
+  seconds while no input is open yet, because the backend tells only a sink
+  that already has a port open.</li>
+<li><strong>Activity:</strong> a light for each input. It flashes on anything that arrives,
+  whether or not the log shows it.</li>
+<li><strong>The log:</strong> newest at the bottom. Each line has the port, the channel,
+  the message (<code>Note On C4 vel 100</code>, <code>CC 20 = 73</code>, <code>Pitch bend +2048</code>,
+  <code>Sysex 6 bytes</code>) and its bytes in hex, from <code>UmpToBytes</code>. MIDI 2.0 arrives
+  scaled to MIDI 1.0. A sysex longer than 512 bytes is logged by its size.
+  The last 256 lines are kept.</li>
+<li><strong>Counts:</strong> messages received, hidden by the filter, and <strong>dropped</strong>.
+  Each input's sink only copies the packet into a lock-free ring of 1024
+  packets, which the screen empties every frame. A burst bigger than that
+  between two frames is dropped and counted, never waited on.</li>
+</ul>
+<p>Every input is opened with <code>midi::open()</code> when the screen opens, and closed
+when it is left. The launcher's own MIDI (<code>launcher/launchermidi.h</code>), which
+listens to the unit's inputs from its start, is paused meanwhile, and the
+ports are the monitor's: one port has one sink. It listens again when the
+monitor closes. The backend is the launcher's, and stopped only when the
+launcher hands over to an app, sleeps or shows the screensaver: it holds no
+ports, and no sequencer client, while an app runs. On the sequencer tiers
+other programs keep their ports; on the raw MIDI tier a device has one
+owner, the launcher while it runs.</p>
+<h2 id="about">About</h2>
+<p><strong>About</strong> says what the unit is and what it runs: the platform's version,
+the board and which physical unit it is (the SOC ID that <code>audio.json</code> is
+keyed on), the kernel, CPU, memory, uptime, SDL, the display, the input
+device, and the audio settings every app starts from. It is the same list an
+app's own ABOUT page can show, from the SDK's <code>sysfacts::about()</code>.
+Read-only; B leaves.</p>
+<h3 id="noizg8">NOIZG8</h3>
+<p>START pressed three times on About opens a game. sndy flies out over a city
+at night to meet the noise coming in, and everything in it is music: his
+shots play a line on the chord on the sixteenths, kills strike the chord in
+time and let go of notes that fly back to him and climb the scale as they are
+caught, the noise comes in on the bar and fires on the beat, and the song
+fills out as the kills come without a hit. A run is five takes, each its own
+song with its own tempo, groove, chords and sounds (the shots, the kills and
+the notes caught too), its own part of town, noise and boss, each faster and
+harder than the last:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>take</th>
+<th></th>
+<th>the boss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>a cold night, slow and dark; things up out of the deep</td>
+<td>THE HUM, an anglerfish</td>
+</tr>
+<tr>
+<td>2</td>
+<td>the city in neon; static</td>
+<td>DISTORTION, a one-eyed squid</td>
+</tr>
+<tr>
+<td>3</td>
+<td>sundown; things that fly</td>
+<td>FLUTTER, a moth</td>
+</tr>
+<tr>
+<td>4</td>
+<td>a green night; blocks</td>
+<td>BITCRUSHER, a skull of them</td>
+</tr>
+<tr>
+<td>5</td>
+<td>everything on fire; steel</td>
+<td>BRICKWALL, a wall that walks</td>
+</tr>
+</tbody>
+</table></div>
+<p>A take's song plays its parts with its boss last; the boss down, the next
+take begins. The fifth down is ALL CLEAR. The best score is kept in
+<code>game.json</code>.</p>
+<p>The bigger noise now and then, a gold formation wiped out, the outro, and
+each boss at a third and two thirds of its life let go of upgrades, which
+one at random, each an effect:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>upgrade</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CHORUS</td>
+<td>three shots in a fan (the band plays three notes)</td>
+</tr>
+<tr>
+<td>ECHO</td>
+<td>two fainter sndys on your path, firing with you (your shots' note comes back a dotted eighth later, and again)</td>
+</tr>
+<tr>
+<td>OVERDRIVE</td>
+<td>shots twice as hard (and louder, with grit)</td>
+</tr>
+<tr>
+<td>PHASER</td>
+<td>shots go through the noise, five before they stop</td>
+</tr>
+<tr>
+<td>AUTOTUNE</td>
+<td>shots bend toward the nearest noise ahead of them</td>
+</tr>
+<tr>
+<td>LIMITER</td>
+<td>a shield: it takes a hit for you, and goes</td>
+</tr>
+</tbody>
+</table></div>
+<p>You have one at a time: a new one takes the place of the one you have, and
+the same one again fills its meter (the FX meter, bottom right, with its
+name), which runs dry over twelve bars. A hit, or the meter run dry, takes
+it: DRY.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>control</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D-pad, left stick</td>
+<td>fly</td>
+</tr>
+<tr>
+<td>A or Y, held</td>
+<td>fire</td>
+</tr>
+<tr>
+<td>B or X</td>
+<td>the drop, when its meter is full: everything on screen takes a hit, their shots turn to notes</td>
+</tr>
+<tr>
+<td>L1 or R1, held</td>
+<td>fly slow, and show the one pixel that can be hit</td>
+</tr>
+<tr>
+<td>Start</td>
+<td>pause; B there goes back to the launcher</td>
+</tr>
+<tr>
+<td>Volume keys</td>
+<td>the sound card's own playback levels, for the card the game plays to: a step a press, repeating while held, each step moving the first of Master, PCM, Line Out, Headphone, Speaker and DAC with room to go that way; the band's own level where the card has none</td>
+</tr>
+</tbody>
+</table></div>
+<p>It is drawn at half the panel's pixels or a third (<code>launcher/gameart.*</code>):
+every sprite, the city and the pixel fonts in code, the logo cut from
+JetBrains Mono. The band is a synth of its own (<code>launcher/gamesound.*</code>) that
+keeps the time the game plays to; it plays into the launcher's stream from
+the game's start to its close, and the stream is closed before an app
+starts, so the app finds the card free.</p>
+<h2 id="screensaver">Screensaver</h2>
+<p>After a minute with no button pressed on the launcher's pages, the game's
+city goes by with no one in it (<code>launcher/saver.*</code>), drawing thirty frames a
+second. Any button brings the launcher back and does nothing else. It does
+not start over Controls, Audio, MIDI, Network or the game, nor while a
+message box is up, and a message box arriving puts it away. While it is up
+the launcher's sound stream is let go of, faded out and closed, so nothing
+holds the card; it is opened again, faded in, when the screensaver ends.
+Sleep does the same.</p>
+<h2 id="network-wi-fi-bluetooth-usb-networking-and-ssh">Network: Wi-Fi, Bluetooth, USB networking and SSH</h2>
+<p><strong>Network</strong>, a row on the SETTINGS page after MIDI, puts
+the unit on Wi-Fi, pairs Bluetooth devices, lets a computer reach it over a
+USB cable, and lets it be logged in to over SSH, without taking the card
+out to edit files on it. A opens it; B goes back a screen, and from its
+menu back to SETTINGS. The row's note says how things stand: the network
+and address it is on, a connected Bluetooth device, USB networking's
+address, or, while SSH is on, <strong>SSH is ON</strong> and the command to connect
+with, in the warning color.</p>
+<p>Network opens on a menu of five, each with how it stands under its name,
+each opening its own page:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>page</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Interfaces</td>
+<td>every network interface but <code>lo</code>, built in or a USB adapter (<code>wlx0ccf89f495ea</code>, <code>enx606d3cbcf661</code>), Wi-Fi or wired: its state and IPv4 address. To read; NetworkManager brings a wired one up by itself</td>
+</tr>
+<tr>
+<td>Wi-Fi</td>
+<td>connected or not, the network, its IPv4 address. Choose a network, forget the one joined, Wi-Fi off or on</td>
+</tr>
+<tr>
+<td>· networks</td>
+<td>what a scan finds, strongest first: name, WPA2 / WPA3 / open, saved, connected, signal. A joins, X scans again, Y forgets a saved one, B goes back</td>
+</tr>
+<tr>
+<td>· passphrase</td>
+<td>the <a href="#the-on-screen-keyboard">on-screen keyboard</a>, masked: D-pad moves, A types, B deletes (B on an empty field goes back), X shift, Y space, SELECT shows or hides it, START joins. It is checked as you type: 8 to 63 characters, or 64 hex digits</td>
+</tr>
+<tr>
+<td>Bluetooth</td>
+<td>on or off, and the paired devices, connected or not. Devices (while it is on), Bluetooth off or on</td>
+</tr>
+<tr>
+<td>· devices</td>
+<td>what a scan of a few seconds finds, paired ones too: name, address, paired, connected. A connects (pairing first) or disconnects, X scans again, Y forgets a paired one (after a card), B goes back</td>
+</tr>
+<tr>
+<td>· MIDI controllers</td>
+<td>the same list from an LE scan for BLE-MIDI gear alone, with the same buttons. <a href="#midi">Settings → MIDI → MIDI controllers</a> opens this very screen, since that is where someone looking for a keyboard looks first; from there B goes back to the MIDI page, and where Bluetooth is off or absent the Bluetooth page opens instead and says so</td>
+</tr>
+<tr>
+<td>USB networking</td>
+<td>the mode and the unit's address on it, and how to log in over it. Connected to my PC, Connected to a hub, As a host (each where the port can do it), off while one is on, and Remember network settings</td>
+</tr>
+<tr>
+<td>SSH</td>
+<td>on or off, <code>ssh sst@192.168.1.23</code> while it is on, and who could then log in. Make host keys, turn SSH on or off</td>
+</tr>
+</tbody>
+</table></div>
+<p>Nothing is hidden for want of hardware. Every page is on every unit, and
+one with nothing to drive says <strong>No … device present</strong> and, where the
+helper can tell, why, in this order: a hardware switch (rfkill), firmware
+the kernel failed to load (named, from the kernel log), hardware on the
+SDIO bus (or a USB Bluetooth interface) with no driver bound, or no
+hardware at all. On these kernels a radio with no driver or no firmware is
+more common than no radio. A unit with no built-in Wi-Fi joins through a
+USB Wi-Fi adapter the same way: NetworkManager drives either.</p>
+<p>Joining takes up to 45 seconds; a card says so, and the buttons wait. A
+saved network or an open one is joined without asking. A passphrase the
+network turns down is not kept: the keyboard comes back with it still
+typed, to correct. WEP and 802.1X (eduroam, company networks) are listed
+but not joined. Hidden networks (no name) are not listed, but the list
+says how many there are.</p>
+<p><strong>Power saving</strong> (on the Wi-Fi page) turns the radio's power saving off
+or on (<code>iw</code>, and NetworkManager's <code>wifi.powersave</code> for later connections),
+and with it the driver's deep power save where it has a switch (rtw88's
+<code>disable_lps_deep</code>, behind the "firmware failed to leave lps state" errors
+on an RG35XX SP). Off is kept across restarts in the helper's
+<code>/etc/NetworkManager/conf.d/sndstation-wifi-powersave.conf</code>,
+<code>/etc/modprobe.d/sndstation-rtw88.conf</code> (where rtw88 is a module) and
+<code>/etc/tmpfiles.d/sndstation-rtw88.conf</code> (where it is built in, as on the
+SP's kernel, so modprobe.d never applies); on removes them. A driver without
+the switch is said so on the row.</p>
+<h3 id="bluetooth">Bluetooth</h3>
+<p>Pairing is done with no PIN (BlueZ's NoInputNoOutput agent): a pad cannot
+type one back, and the devices a music unit pairs with (headphones, MIDI
+keyboards and controllers) do not ask for one. A paired device is trusted,
+so it reconnects on its own. A device that wants a PIN, or one not in
+pairing mode, fails to pair and the page says so.</p>
+<h3 id="usb-networking">USB networking</h3>
+<p>A network over a USB cable, with no Wi-Fi, in one of three modes. Picking
+one turns off whichever was on first.</p>
+<ul>
+<li><strong>Connected to my PC.</strong> The unit's USB port becomes a USB Ethernet device
+  (a configfs gadget with one CDC NCM function, which Windows 10 and later,
+  macOS and Linux drive with no extra driver; CDC ECM, which Windows cannot,
+  on a kernel without NCM), and the unit takes <code>10.55.0.1/24</code> on it. With
+  <code>dnsmasq</code> in the image, NetworkManager hands the computer an address too;
+  without it, give the computer <code>10.55.0.2/24</code> by hand. Then
+  <code>ssh sst@10.55.0.1</code> reaches the unit, once SSH is on. The usual choice, so
+  it is listed first.</li>
+<li><strong>Connected to a hub.</strong> The same USB Ethernet device, but the unit asks
+  for an address rather than giving one, and keeps asking until a unit in
+  host mode answers. Plugged into that unit, or into a hub on it, it gets a
+  <code>10.56.0.x</code> address; until then the page says it is waiting. Its MAC
+  addresses come from the unit's machine-id, so units on one hub differ.</li>
+<li><strong>As a host.</strong> The port is a USB host, and a bridge (<code>br-usb</code>) takes in
+  every USB Ethernet link on it and hands out <code>10.56.0.10</code>–<code>254</code>, with the
+  unit at <code>10.56.0.1</code>. Units connected to a hub join it, and so does any
+  other USB Ethernet plugged in: a USB Ethernet adapter on this unit joins
+  the bridge rather than working on its own while host mode is on. The page
+  says how many have joined.</li>
+</ul>
+<p>No mode hands out a route or DNS: a computer or another unit reaches this
+one, but its own traffic never goes through it (a wired route outranks
+Wi-Fi, so one would take over a laptop's internet).</p>
+<p>The device modes need a port with a device mode (a UDC under
+<code>/sys/class/udc</code>, or a USB role switch under <code>/sys/class/usb_role</code> that can
+make one) and the kernel's <code>libcomposite</code>. Host mode needs a host port of
+its own beside the UDC's, or a role switch. A mode the unit cannot do is
+not listed, and with none the page says what is missing. On a role switch
+(RK3326) the port is told to be a device in the device modes, and so is no
+host: a USB Wi-Fi or Ethernet adapter on that port stops working, and the
+page says so. Host mode on such a port refuses while another USB gadget
+holds it. Turning a mode off, or a failure, puts the port back as it was.</p>
+<p>Every mode is off again at the next restart unless <strong>Remember network
+settings</strong> is on (it is off until turned on). Then the mode in use comes
+back at boot: <code>sndstation-usbnet.service</code> runs the helper's <code>usb-boot</code>,
+which reads <code>/etc/sndstation/usb-network</code>. A remembered mode the unit can
+no longer do is left off, and the reason goes to the journal. How it all
+works, and what to check when a unit does not come up:
+<a href="usb-networking.html">usb-networking.md</a>.</p>
+<h3 id="ssh-off-unless-turned-on-here">SSH: off unless turned on here</h3>
+<p>Turning SSH on asks first, on a card with CANCEL under the cursor, saying
+who could then log in. It stays on through restarts until it is turned off
+here. The page refuses to turn it on, and says what to do instead, when:</p>
+<ul>
+<li>the unit has <strong>no host keys</strong> yet. Release images make them on first
+  boot; if they are missing, <strong>Make SSH host keys</strong> runs <code>ssh-keygen -A</code>.</li>
+<li>sshd takes passwords and the user's is <strong>empty</strong>, or <strong>still the image's
+  default</strong> (<code>sst</code>, which is public, or the user's own name). Exit to shell
+  and run <code>passwd</code>, then turn SSH on. A key in <code>~/.ssh/authorized_keys</code> does
+  not make the default password safe while sshd still takes passwords; with
+  <code>PasswordAuthentication no</code>, the key is the only way in, and that is
+  allowed.</li>
+</ul>
+<p>The page never sets a password, never adds a key and never turns SSH on by
+itself. Note that the sndstation <strong>release images</strong> come with
+<code>openssh-server</code> enabled by Debian's package and the login <code>sst</code> / <code>sst</code>;
+the page shows that as <strong>SSH is ON</strong>, and turning it off here disables it.</p>
+<h3 id="how-it-works">How it works</h3>
+<p>The launcher never runs as root. It runs one helper,
+<code>/usr/lib/sndstation/sndstation-netctl</code>
+(<span><code>tools/sndstation-netctl</code></span>), through
+<code>sudo -n</code>, and the package's install script lets the <code>sudo</code> group do that
+without a password, on a handheld only (<code>/etc/sudoers.d/sndstation-netctl</code>,
+checked with <code>visudo</code>, removed with the package; the same rule lets Storage
+mount and eject cards, below). The helper uses what the
+image already has:</p>
+<ul>
+<li><strong>Wi-Fi</strong>: NetworkManager (<code>nmcli</code>), which the release images ship with
+  wpa_supplicant. A network is joined by writing a connection into
+  NetworkManager's own store, <code>/etc/NetworkManager/system-connections/</code>
+  (0600, root), loading it and bringing it up. The passphrase reaches the
+  helper on stdin, never on a command line (<code>sudo</code> logs those, and <code>/proc</code>
+  shows them to everyone); it is never printed or logged, and the launcher
+  keeps no copy. A connection that does not come up is deleted. Forgetting
+  deletes every saved connection for that network.</li>
+<li><strong>SSH</strong>: OpenSSH's <code>ssh.service</code> (<code>sshd.service</code> elsewhere),
+  <code>systemctl enable --now</code> and <code>disable --now</code> (its socket too). Whether the
+  password is the default is checked as root, against <code>/etc/shadow</code>, with
+  the entry's own salt.</li>
+<li><strong>Bluetooth</strong>: BlueZ's <code>bluetoothctl</code> (<code>show</code>, <code>power</code>, <code>scan</code>, <code>pair</code>,
+  <code>trust</code>, <code>connect</code>, <code>disconnect</code>, <code>remove</code>). An address is checked to be
+  one before it is passed on. BlueZ keeps the pairings, in
+  <code>/var/lib/bluetooth</code>.</li>
+<li><strong>USB networking</strong>: configfs (<code>/sys/kernel/config/usb_gadget/sndstation</code>,
+  after <code>modprobe libcomposite</code>) for the gadget, and NetworkManager
+  connections made with <code>save no</code> (<code>sndstation-usb</code>; in host mode the bridge
+  <code>sndstation-usbhost</code> and its port profile <code>sndstation-usbhost-port</code>), so
+  none outlives a restart. A role switch is set to <code>device</code> (or <code>host</code>)
+  first, and back afterward (its old role is kept in <code>/run</code>, with the mode
+  in use). Remembering is <code>/etc/sndstation/usb-network</code>, put back at boot by
+  <code>sndstation-usbnet.service</code>.</li>
+<li><strong>Interfaces</strong>: <code>/sys/class/net</code>, and <code>ip -4 addr</code> for the address, so
+  an interface NetworkManager does not manage is listed too.</li>
+<li><strong>Why nothing is there</strong>: <code>/sys/class/rfkill</code>, the kernel log (<code>dmesg</code>)
+  for firmware that failed to load, and <code>/sys/bus/sdio</code> and
+  <code>/sys/bus/usb</code> for hardware with no driver bound.</li>
+</ul>
+<p><strong>Needs the image.</strong> The release images have NetworkManager and OpenSSH,
+but not yet BlueZ (<code>bluez</code>) or a USB gadget set up, and <code>dnsmasq-base</code> is
+needed for USB networking to hand out an address. Until the distribution
+adds them, Bluetooth says it is not installed and USB networking says what
+is missing; Wi-Fi and SSH work as they are.</p>
+<p>A call that runs too long is given up on: 40 s, or 75 s for joining a
+network or pairing a device. The helper and anything it started are killed,
+and the page says the helper did not answer in time; its own calls to
+<code>bluetoothctl</code> and <code>systemctl</code> stop at 30 s. The status is read again every
+5 s on the page and every 30 s while it is closed (for the launcher's row),
+without a card; a button pressed meanwhile is not held up by it, its work
+goes next behind its own card. That read is one helper call (<code>status</code>), so
+one <code>sudo</code>, which the sudo rule leaves out of the logs since it changes
+nothing. The helper keeps its verdict on the password (a yescrypt per
+candidate, slow on these CPUs) in <code>/run</code>, root's only, until the hash
+changes; Bluetooth is two <code>bluetoothctl devices</code> listings (BlueZ 5.65 or
+later), not one call per device; and USB networking's status looks for
+<code>libcomposite</code> without loading it.</p>
+<p>It answers in lines the launcher reads (<code>netctl 1</code>, then <code>key=value</code>), so
+it can be tried from a shell: <code>sudo -n /usr/lib/sndstation/sndstation-netctl
+wifi-status</code>. Without the helper, on a desktop say, the page says so; with
+<code>--fake-net</code> it runs on an in-memory unit with five networks around it
+(<code>correct horse</code> joins any of them), Bluetooth off with three devices
+nearby, and a USB port that can do USB networking, for development and
+<code>--shots</code> (18–41, with the no-device and no-driver pages).</p>
+<h2 id="storage-sd-cards-usb-drives-and-files">Storage: SD cards, USB drives and files</h2>
+<p>SETTINGS → Storage lists Home and every SD card and USB drive in the unit
+that is not the one the system runs from: its name (its label, or "SD
+card", "USB drive"), its file system, its size, and where it is mounted,
+with what is free on it, or that it is not mounted.</p>
+<ul>
+<li><strong>A</strong> opens it in the file browser, mounting it first if it is not.
+  Every file is offered; A on one shows it as it is, the way a license is
+  shown (an image as an image, text as text, anything else as its first
+  bytes in hex). B goes up a folder, and from where it opened back to the
+  list.</li>
+<li><strong>Y</strong> ejects a mounted one (written out, then unmounted: safe to take
+  out), or mounts one that is not.</li>
+<li><strong>X</strong> lists them again: nothing polls, so a card put in while the page is
+  open shows up on X.</li>
+</ul>
+<p><strong>The system's card</strong> has a row of its own after Home when the system can
+grow into what the card has unused ("System card · +25.0 GB"). An image
+written to a card is only as big as the image, and the rest of the card
+sits unused until it is grown into. The grow is the image's own
+<code>/usr/local/bin/grow-rootfs</code> (sndstation/distribution): it extends the
+root partition to the end of the card and grows its ext4, early in a boot,
+with its progress on screen, and nothing grows by itself. Without that
+script, or with no room, there is no row.</p>
+<ul>
+<li><strong>A</strong> asks first ("Grow by 25.0 GB in the next restart? Do not power off
+  while it runs."); A again requests it (<code>grow-rootfs request</code>), B or any
+  other key is a no. Then the row says it grows on the next restart, and
+  <strong>A</strong> opens the power menu on Restart (below).</li>
+<li><strong>Y</strong>, while it is pending, cancels it (<code>grow-rootfs cancel</code>).</li>
+</ul>
+<p>A card is mounted at <code>/media/sndstation/&lt;its label&gt;</code> (a label that is not
+a safe path is made one; no label, <code>sd-mmcblk1p1</code>), <code>nosuid</code> and <code>nodev</code>.
+FAT, exFAT and NTFS keep no owners, so they are mounted as the user's; the
+others keep their own. A card the image mounts by itself (ArkOS puts a
+second card at <code>/roms2</code>) is listed where it is, and the file browser offers
+it as a place. A file system it cannot mount (HFS+, say) is listed, and
+says so.</p>
+<h3 id="how-it-works-1">How it works</h3>
+<p>The listing is
+<code>/usr/lib/sndstation/sndstation-storage list</code>
+(<span><code>tools/sndstation-storage</code></span>), run as the
+user: <code>lsblk</code> needs no root. The disk the system runs from is the one any
+of the system's mount points (<code>/</code>, <code>/boot</code>, <code>/flash</code>, <code>/storage</code>,
+<code>/userdata</code>...) are on, and nothing on it is listed; with no such disk
+found, nothing is. Mounting and ejecting run the same helper through
+<code>sudo -n</code>, by the same sudo rule as Network's, and it mounts or unmounts
+only what it lists, and only at a new or empty directory. It answers in
+lines (<code>storage 1</code>, then <code>vol</code> records, a <code>grow</code> record for the system's
+card, and <code>key=value</code>), so it can be tried
+from a shell: <code>/usr/lib/sndstation/sndstation-storage list</code>. With
+<code>--fake-storage</code> the page runs on a made-up SD card, a USB stick and a disk
+it cannot read, for development and <code>--shots</code> (21–21g).</p>
+<h2 id="software-packages">Software packages</h2>
+<p>SETTINGS → Software packages is everything the unit installs, through apt.
+Opening it asks every source first, and the page stays grey until it has
+compared what each has with what is installed; X asks again. Offline (as
+NETWORK knows it), it asks nothing, shows what is installed, and removes;
+nothing says <em>up to date</em> until every source has answered a check.
+Leaving it after anything was installed, removed or upgraded walks the
+CLAP plugin folders, as at start, and reads APPS again. <strong>Updates</strong>,
+whose row names the sources its updates come from, installs the unit's updates: <code>apt-get update</code>, then what <code>apt
+upgrade</code> does, with every update listed by where it comes from (Security,
+each supplemental source, the base system, Kept back), its versions, size
+and changelog, and apt's own progress and log while it installs. The kernel
+and boot loader are held; an install refuses a battery under 30% that is
+not charging; nothing is ever installed unasked. A background check, at
+most daily, lets the row say how many there are. <strong>sndstation</strong> lists the
+sndstation source's apps, plugins, sounds and skins to get, update (A) or
+remove (Y), its row saying how many are installed, how many more are
+available, and whether any has an update; <strong>Vendors</strong>, one row that opens
+the list of every instrument maker the unit has, however many there are,
+with their demos and free
+products, any of them removed from the unit with Y and added back with A, where START gets every one not installed yet, after one card,
+and a vendor that did not answer is in red; <strong>Install a .deb file</strong> shows a full
+version's <code>.deb</code>, from a card or a stick, and installs it (a <code>.deb</code> opened
+in Storage's files comes here too). All of it is in
+<a href="updates.html"><code>updates.md</code></a>. With <code>--fake-updates</code> the page runs on made-up
+updates and packages (<code>--shots</code> 21h–21u, 21o0 the page while it asks, 21o1 and 21o2 offline, 21o3 before NETWORK has read the unit's status, 21o4 the vendors' list, 21o5 and 21o6 the page and that list with thirty vendors more).</p>
+<h2 id="display">Display</h2>
+<p>SETTINGS → Display has two rows, chosen with UP and DOWN: the screen's
+brightness, and the launcher's skin. Both show at once and are saved when
+B goes back.</p>
+<h3 id="brightness">Brightness</h3>
+<p>LEFT and RIGHT take the brightness down and up 5% at a time, held to keep going, and it shows at once. B goes
+back, and the level is saved in the platform's <code>system.json</code> (its user
+copy, <code>"display": {"brightness"}</code>) and set again whenever an sndstation
+program opens its window (the SDK's <code>Window</code> does it), so every app has
+it, started from the launcher or on its own, booted into or not. Apps have nothing to do with it:
+it is the unit's setting.</p>
+<p>It drives the kernel's backlight, <code>/sys/class/backlight/&lt;name&gt;</code> (the one
+system.json's <code>display.backlight</code> names, else the kernel's preferred one),
+through <code>sndstation/display.h</code>. The level is as the eye sees it: the duty is
+<code>level ^ brightness_gamma</code> (2.2) over <code>brightness_floor</code> (5% of the
+maximum), so equal steps look equal and the lowest one still lights the
+screen. No root: the package's udev rule
+(<code>/etc/udev/rules.d/70-sndstation-backlight.rules</code>, handhelds only) hands
+the backlight's <code>brightness</code> to the <code>video</code> group, which the session's user
+has to be in. A unit with no backlight there (vendor sunxi kernels take it
+through <code>/dev/disp</code>) says so, and is left as it is. No brightness keys yet.</p>
+<h3 id="skin">Skin</h3>
+<p>LEFT and RIGHT put on the next skin: the launcher's colors, all of them,
+changed from the next frame. A row of swatches shows the skin's colors.
+It is saved in the platform's <code>system.json</code> as <code>"display": {"skin": ID}</code>
+and put on when the launcher starts.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Skin</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dark</td>
+<td>the SDK's own look, and the default</td>
+</tr>
+<tr>
+<td>Light</td>
+<td>paper and ink, for daylight; the accents darkened to keep their contrast</td>
+</tr>
+<tr>
+<td>High contrast</td>
+<td>white on black, yellow and cyan accents, the quiet text no longer quiet</td>
+</tr>
+<tr>
+<td>Stage red</td>
+<td>dim reds on black, for a dark stage: it keeps the eyes' night vision</td>
+</tr>
+</tbody>
+</table></div>
+<p>The skins are <code>config/skins.json</code>, each a style block over the SDK's look,
+keyed by id. A unit's own <code>~/.config/sndstation/skins.json</code> changes one or
+adds one without copying the rest (<code>"order"</code> places it; Dark stays first). A
+skin sets colors only: fonts and sizes would need the window opened again.
+An id that names no skin leaves the SDK's look on and says so.</p>
+<p>An app wears the skin only if it asks: <code>"skin": "system"</code> in its manifest
+(above), or in its own style block.</p>
+<p><code>--skin ID</code> runs the launcher in a skin for once, without saving it. With
+<code>--shots</code>, every screen is drawn in it. The shots always include each skin
+on APPS and SETTINGS (22e on) and the Skin row (22d).</p>
+<h2 id="the-on-screen-keyboard">The on-screen keyboard</h2>
+<p>Text typed with the pad, for the Wi-Fi passphrase and anything else that
+needs it. It is in the library (<code>sndstation/keyboard.h</code>, <code>Keyboard</code>), so an
+app can use it too. Four rows of ten keys, then five wide ones: case, <code>#+=</code>
+(symbols), SPACE, DEL and an OK key the page names (JOIN on Wi-Fi). The
+d-pad moves and wraps on every edge, A types the key under the cursor, B
+deletes (and on an empty field goes back), X is shift, Y a space, START is
+OK from anywhere, and SELECT shows or hides a masked field. A masked
+keyboard overwrites its text before letting it go. The <code>Name</code> layout, for a
+short label, has capitals, digits and <code>- + / .</code> only.</p>
+<h2 id="the-file-browser">The file browser</h2>
+<p>A file picked with the pad, for a plugin's license and anything else that
+needs one. It is in the library beside the keyboard
+(<code>sndstation/filebrowser.h</code>, <code>FileBrowser</code>), and looks and moves like it: a
+field saying where it is, a tile for each folder and then each file it
+offers, and a row of wide keys, PLACES, UP and an OK key the page names
+(REGISTER for a license). It starts at the places: home, anything mounted
+under <code>/media</code>, <code>/run/media</code> or <code>/mnt</code>, any FAT or exFAT volume that is not
+<code>/boot</code>, and anything mounted from a disk the system is not on, wherever
+the image mounts it. A page that lists the places itself (Storage) opens it
+in a folder instead, and up from there is back to that page. Hidden files
+are left out, and only files with the extensions
+the caller names are offered. Up and Down move, Down from the last row
+reaches the wide row; A opens a folder or picks a file, B goes up a folder
+(from the places, back), Y goes to the places, START picks the file under
+the cursor.</p>
+<h2 id="plugins">Plugins</h2>
+<p>The launcher keeps the unit's CLAP plugin cache,
+<code>~/.config/sndstation/clap_plugins.json</code>, the one file every app reads its
+plugin list from (<code>clapdb::platformDatabasePath()</code>). Every time it starts,
+which is at boot and each time an app exits, once the first-run Controls
+and Audio are out of the way:</p>
+<ol>
+<li>It walks the plugin folders: <code>plugins.scan_paths</code> from the platform's
+   <code>system.json</code>, else <code>/usr/lib/clap</code>, <code>/usr/local/lib/clap</code>, <code>~/.clap</code> and
+   every directory in <code>$CLAP_PATH</code>. A file whose size and modification time
+   are what the cache last saw is not read again, so a walk that finds
+   nothing new costs next to nothing.</li>
+<li>Each plugin that is new, or whose binary changed, is loaded in a child
+   process and checked and rated by <code>clapprobe</code> at its <code>conformant</code> level
+   (<span><code>clap.md</code></span>), at the unit's own sample rate and buffer size. A
+   screen counts them off meanwhile. One that crashes or hangs costs a child
+   process and a line in the cache, never the launcher. Indexing preset files
+   is what can take long, so the first half second of it is timed: when
+   the rate says the rest will take two seconds or more, a second bar
+   counts the files, and B (South) stops the indexing. A quick library, and
+   presets inside the plugin (one call, nothing to show between), show
+   nothing. Stopped, the presets found so far are kept, the plugin is
+   checked to the end, and the next start indexes its presets again. A
+   library of thousands of files takes as long as it needs; only one file
+   that takes over 10 s stops it, and its presets are then left out.</li>
+<li>If anything is new, or gone, a message box says so: each new plugin with
+   its rating out of 100, or that it crashes, hangs or will not load and is
+   not listed. A file of many plugins is one line: how many it holds, how
+   many play, and their ratings (<code>effects-pack: 12 plugins, 11 play,
+   71-100/100</code>); the log has each one. A plugin whose presets were stopped
+   says <code>presets stopped</code>, and one whose presets crashed or hung says
+   <code>presets left out</code>. Any button closes it.</li>
+</ol>
+<p>The same goes to the log (<code>plugins: …</code>). Twenty packaged files, 195
+plugins in all, take about fourteen seconds the first time on a desktop and
+nothing after that.</p>
+<p>The PLUGINS page lists every plugin the cache says plays. A on one shows
+it close up: its check and rating out of 100, which of the strict checks it
+missed, and when it was checked. There, <strong>A plays it</strong> (below), X (North)
+checks it again, Y (West) is its license's (REGISTER or SHOW LICENCE, when
+it has one), and B goes back to the list. The same buttons mean the same
+everywhere in the launcher: A does the thing, B goes back, X rescans or
+checks again, Y is the item's own second thing, START is A.</p>
+<p>X (North) on the list walks the folders again in the same way, for a
+plugin installed while the launcher was up; a walk that finds nothing new
+shows nothing. It also asks every plugin that says what its license is
+what it says now (below), since a license installed or removed does not
+change the plugin's file; one that changed is in the message. With <code>--no-plugin-scan</code> it only reads the cache again.</p>
+<p>A plugin that says what its license is (the license extension,
+<span><code>clap.md</code></span>) has a tag on the list: FREE, FOSS, DEMO,
+EXPIRED or REGISTERED, with DEMO and EXPIRED the ones that stand out. Its
+close up says the same, with the license's SPDX name and URL for one that
+is open source, and what the plugin tells the user for one that is not
+registered. A plugin that says nothing has no tag and no license rows.</p>
+<ul>
+<li><strong>DEMO, EXPIRED:</strong> Y (REGISTER) registers it the way it takes: a file, a
+  key, or, when it takes both, a choice between them. A key is typed on
+  the on-screen keyboard (B deletes, and cancels on an empty field), and
+  START or REGISTER hands it to the plugin; a key it refuses stays there,
+  to be corrected. A file is picked in a file browser. It starts at the places a
+  file can come from: home, anything mounted under <code>/media</code>, <code>/run/media</code>
+  or <code>/mnt</code>, and any FAT or exFAT volume that is not <code>/boot</code>. It offers
+  only the files the plugin says a license ends in (all of them, when it
+  does not say). A on a file hands it to the plugin. The plugin installs it
+  itself, wherever it keeps its licenses, and says where. The launcher
+  writes nothing but the plugin's new answer, into the cache. The browser
+  is the library's (below, "The file browser"). The message after says the
+  plugin accepted the file, and nothing of what is in it.</li>
+<li><strong>REGISTERED:</strong> a license can carry a name, an email, an address, so
+  nothing of it is on the close up: not who it is registered to, not the
+  file. Y (SHOW LICENCE) shows it: the file the plugin names, a PNG as the
+  picture it is (never stretched: at the most whole times it fits, or scaled
+  down only when it is bigger than the screen), text as text, anything else as its first 512 bytes in hex,
+  under who it is registered to. The first time in a run it asks first,
+  with CANCEL under the cursor. Up and Down scroll; A or B close it.</li>
+</ul>
+<h3 id="playing-a-plugin">Playing a plugin</h3>
+<p>A on a plugin's close up plays it in the launcher itself: no app is
+started, nothing is unloaded, and B or the plugin's own quit brings back
+the list. The host is the platform's (<code>ClapPlayer</code>, <code>clapplayer.h</code>), and it
+plays into the launcher's sound stream, a source on its mixer, with the
+launcher's MIDI (every input the unit listens to) pointed at it: it opens no
+device of its own (<a href="audio-stack.html">audio-stack.md</a>). A plugin built for the
+hardware gets <code>clap.embedded-hardware</code> (<span><code>embedded-hardware.md</code></span>).</p>
+<ul>
+<li><strong>A plugin built for the hardware</strong> (it has the extension's plugin side
+  and asked for its event space) does its whole thing: the panel is its
+  screen, its canvas scaled by a whole number and centered when it asks for
+  a smaller one, and every control is its own but MENU and the volume
+  keys, which stay the unit's. MENU opens the power menu with <strong>Close
+  <em>its name</em></strong> on top; the plugin's <code>request_quit()</code> closes it too. Sleep
+  tells it (<code>suspend()</code>, then <code>resume()</code> and a RESET).</li>
+<li><strong>Any other plugin</strong> gets a test bench: the card, rate and period it
+  plays at, its work as a share of each block (the worst in the last
+  second), dropouts, the level of each side, MIDI in, the notes held, and
+  a chord: A plays it while held, LEFT and RIGHT move its root a semitone,
+  UP and DOWN an octave, Y changes its kind (major, minor, seventh, sus4).
+  B leaves.</li>
+</ul>
+<p>Its state (<code>clap.state</code>) is saved when it closes, however it closes (the
+power menu's restart, shut down and exit included), and loaded the next
+time it plays: <code>~/.local/share/sndstation/plugins/ID.state</code>.</p>
+<p><strong>It runs in the launcher's process</strong>, so a plugin can take the launcher
+down with it. A crash ends the launcher, and the session starts it again
+on its main page (<code>sndstation-session</code>). A hang ends nothing, so a
+watchdog does: the main thread not back for 8 seconds, or the plugin's
+<code>process()</code> for 5 while the launcher's stream plays, ends the launcher the same way.
+Before loading, <code>~/.local/state/sndstation/plugin-running</code> says which
+plugin it is, and a clean close removes it. A launcher that finds it says
+in the footer that the plugin stopped the last one, records when
+(<code>plugins-stopped</code>, beside it), shows that on its close up (LAST PLAYED),
+and plays it again only on a second A. A plugin that did not pass its
+check asks the same.</p>
+<h2 id="the-power-menu-sleep-restart-shut-down-exit-to-shell">The power menu: sleep, restart, shut down, exit to shell</h2>
+<p><strong>MENU</strong> (the unit's FN, Home or MENU key), or <strong>SELECT held, then START</strong>,
+opens the power menu on any of the launcher's pages, over whatever is
+showing, except CONTROLS, which tests those buttons:</p>
+<pre><code>Sleep
+Restart
+Shut down
+─────────
+Exit to shell
+</code></pre>
+<p>While a plugin plays (PLUGINS, A close up), <strong>Close <em>its name</em></strong> is above
+them, the cursor on it.</p>
+<p>Both ways work on every unit: someone used to SELECT+START on another
+handheld finds it, and the SDK reports that chord as MENU to every app
+(<code>sndstation/pad.h</code>, "the Menu chord"), so no app can give it another
+meaning. Every footer on the launcher's pages says how to reach it.</p>
+<p>Opening it is the deliberate step, so an item acts at once, with no second
+question. The cursor starts on <strong>Sleep</strong>, the harmless one, so a stray A
+right after opening never powers anything off. B, or MENU again, closes
+it. While packages are installing (SETTINGS → Software packages), Restart
+and Shut down are dimmed and the menu says why. Restarting and shutting
+down say so over everything until the unit goes; refused, the launcher
+stays and says why. Storage's "restart now", after asking for the system's
+partition to grow, opens this same menu on Restart.</p>
+<p><strong>Shut down</strong> runs
+<code>system.shutdown_cmd</code> from the platform's <code>system.json</code> through <code>sh</code>. By
+default that is <code>systemctl --no-ask-password poweroff</code>, which logind lets
+the user at the unit's own screen run without root where polkit is
+installed, and failing that <code>sudo -n /usr/sbin/poweroff</code>, which the package's sudo rule
+(<code>/etc/sudoers.d/sndstation-netctl</code>, handhelds only) allows the <code>sudo</code>
+group without a password: that command, with no arguments.
+<code>--no-ask-password</code> because otherwise, where polkit says no (a session
+logind does not count as at the screen, such as one started from a serial
+console), systemctl asks for a password on the launcher's terminal and
+waits there, and the sudo fallback never runs.
+Not a bare <code>poweroff</code>: it lives in <code>/usr/sbin</code>, which an ordinary user's
+<code>PATH</code> does not have on Debian, so <code>sh</code> never finds it. An image without
+systemd names its own command there. If the command fails the launcher
+stays up and says so, and sudo's own words are on stderr.</p>
+<p>Powering off is the platform's, not an app's: apps leave to the launcher
+(an app may offer sleep and quit, but not shut down).</p>
+<p><strong>The goodbye.</strong> On a handheld, every power-off (Shut down, the power
+button, <code>poweroff</code> over SSH) ends with the boot splash's dude going to bed,
+at the splash's size: he hops in, pulls the covers up to his chin, shuts his
+eyes and says さようなら in a word balloon, then the lights go out, about
+three and a half seconds in all. <code>sndstation-goodbye.service</code>, wanted by
+<code>poweroff.target</code> (so not on a restart), runs <code>sndstation --goodbye</code> as the
+session user once tty1's session has gone and the display is free. The
+launcher tells systemd when it has played (<code>Type=notify</code>, so the power-off
+waits that long) and keeps the screen dark to the end, so the console's
+shutdown messages never show.</p>
+<p><strong>Exit to shell</strong> ends the session (exit 87, above).</p>
+<p><strong>Restart</strong> (Storage's, once the system's partition is to grow) runs
+<code>system.restart_cmd</code> the same way: <code>systemctl --no-ask-password reboot</code>, else
+<code>sudo -n /usr/sbin/reboot</code>, which the same sudo rule allows with no
+arguments.</p>
+<p>All three are in the SDK, <code>sndstation/power.h</code>: <code>power::off()</code> is SHUT
+DOWN's, <code>power::restart()</code> Storage's, and <code>power::sleep()</code> an app's SLEEP. Sleep runs <code>system.sleep_cmd</code>, which
+has to block until the unit wakes: by default <code>mem</code> written to the kernel's
+<code>/sys/power/state</code>, through <code>sudo -n tee</code>, which the same sudo rule allows
+for that one file and nothing else. The stick lights are put away before
+and brought back after. On a desktop without the rule it is refused, and
+nothing happens.</p>
+<h2 id="options">Options</h2>
+<pre><code>sndstation                  run it
+sndstation --launch ID      start that app straight away, no list
+                              (e.g. booting into one app: the session's first run)
+sndstation --apps DIR       also list the manifests in DIR (repeatable)
+sndstation --res WxH        force the panel size
+sndstation --scale N        a window N times the layout's size, on a desk
+sndstation --hdpi           a desk's retina display at its full pixels, not
+                              stretched from 1x
+sndstation --rot N          turn the frame N degrees onto the panel (0, 90, 180,
+                              270; -1 = auto), over system.json's display.rotate
+sndstation --fake-display WxH   dev: what the display is said to be, so a
+                              sideways panel can be looked at on a desk
+sndstation --shots DIR      headless: write the screens as BMPs, then exit
+sndstation --skin ID        this run in that skin (config/skins.json), not
+                              the saved one; with --shots, every screen in it
+sndstation --battery N      dev: pretend the battery is at N%
+sndstation --fake-audio NAME   dev: a handheld's sound card on a desk
+                              (rk817, rk817ext, h700, h616); it counts as a
+                              handheld for the first run
+sndstation --fake-net       dev: Network's pages (Wi-Fi, Bluetooth, USB,
+                              SSH) on an in-memory unit, not the system's
+sndstation --fake-storage   dev: Storage on a made-up SD card and USB stick,
+                              not the system's
+sndstation --fake-updates   dev: Software packages on made-up updates and packages, installed slowly
+sndstation --tone-wav SIGNAL PATH   dev: three seconds of the test
+                              sound as a WAV (pings, pings-gap, sine), or the
+                              whole MDFourier run (mdfourier[:RATE][:numpy2])
+sndstation --audio-preset   this unit's audio as an entry for
+                              config/audiopresets.json: its set-up, its
+                              speaker's maximum and its card, for a board the
+                              team has calibrated ([audio-page.md](audio-page.md))
+sndstation --rescan-plugins  check and rate every CLAP plugin again, not only
+                              the new ones (after a checker or dependency change)
+sndstation --no-plugin-scan  leave the plugin cache alone this time
+sndstation --logind-lid     print logind's drop-in for system.json's lid
+                              policy, then exit (sndstation-lid.service uses it)
+sndstation --goodbye        play the goodbye, then keep the screen dark until
+                              the power-off ends it (sndstation-goodbye.service)
+</code></pre>
+<p>On a handheld (a display of 1280×800 or less) it takes the panel whole. On
+a desktop it opens a 640×480 window, the size everything is designed at.</p>
+<h2 id="keys">Keys</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>control</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1 / R1, or Left / Right</td>
+<td>the page: APPS, PLUGINS, SETTINGS, ABOUT (every footer says so)</td>
+</tr>
+<tr>
+<td>MENU (FN), or SELECT held then START</td>
+<td>the power menu, on any page but CONTROLS (above)</td>
+</tr>
+<tr>
+<td>Up / Down</td>
+<td>choose (wraps)</td>
+</tr>
+<tr>
+<td>A (East), Start</td>
+<td>do the thing: open the app or the row; on PLUGINS, the plugin close up, and there play it, in the launcher (above)</td>
+</tr>
+<tr>
+<td>X (North)</td>
+<td>rescan or check again: on APPS and PLUGINS, what was installed or removed since the launcher started; in a plugin close up, check that plugin again</td>
+</tr>
+<tr>
+<td>Y (West)</td>
+<td>the item's own second thing: in a plugin close up, register a demo or show a registered plugin's license</td>
+</tr>
+<tr>
+<td>B (South)</td>
+<td>on PLUGINS, back from a plugin close up</td>
+</tr>
+<tr>
+<td>Up / Down, A, B</td>
+<td>in the power menu: choose, do, close</td>
+</tr>
+<tr>
+<td>Left / Right, A, B</td>
+<td>on Network's cards: choose, confirm, cancel</td>
+</tr>
+</tbody>
+</table></div>
+<p>They go through the SDK's pad layer, so a unit's gamepad map and the
+desktop keyboard (arrows, Z/A, Return) work as they do in any app.</p>
+<h2 id="not-yet">Not yet</h2>
+<ul>
+<li>Hold Menu to quit an app back to the launcher.</li>
+<li>Icons. The manifest has no <code>icon</code> key until the launcher can draw one.</li>
+<li>Storage: mounting a card as it goes in, copying and deleting files, and
+  formatting a card.</li>
+<li>Display: brightness keys, the screen dimming and going off when idle, and
+  units whose brightness goes through <code>/dev/disp</code> (vendor sunxi kernels).</li>
+<li>Network: joining a hidden network, WEP and 802.1X, a static address, and
+  showing the unit's host key fingerprint, so a first SSH login can be
+  checked. Bluetooth devices that need a PIN.</li>
+</ul>
+    <p class="foot">From <code>docs/launcher.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

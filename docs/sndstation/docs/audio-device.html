@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The audio device layer: the mixer, the test signals, the buffer and the card · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html" aria-current="page">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="the-audio-device-layer-the-mixer-the-test-signals-the-buffer-and-the-card">The audio device layer: the mixer, the test signals, the buffer and the card</h1>
+<p>How sound gets from <code>AudioOut</code> to the card, and what the platform measures on
+the way: the hardware mixer, read and written in-process; the test signal and
+MDFourier; the buffer and the rate; which card plays; and where plug
+detection is read. The code is the SDK's <code>audiodev</code>, <code>mixerio</code>, <code>audioout</code>,
+<code>alsastream</code> and <code>audiocard</code>, and the test tone <code>testtone</code>.</p>
+<p>The overview, who opens the device and when, is
+<a href="audio-stack.html"><code>audio-stack.md</code></a>. The unit's profile, the set-up by ear and
+the AUDIO page are <a href="audio-page.html"><code>audio-page.md</code></a>; the volume and the
+maximums are <a href="audio-levels.html"><code>audio-levels.md</code></a>.</p>
+<hr />
+<h2 id="1-the-mixer-in-process-not-through-amixer">1. The mixer in-process, not through <code>amixer</code></h2>
+<p>Every mixer and jack read, and every write, used to run <code>amixer</code>: about
+230 ms a call on an RG351V, all of it blocking whoever waited. The page
+grew mechanisms to hide it — writes coalesced into a 120 ms window, reads
+on a worker thread, no socket polling while a test sound played, a title
+frozen meanwhile — and the opening freeze of the AUDIO page and of every
+app on a headphone plug was three or four of those calls on the UI thread.</p>
+<p><code>src/mixerio.cpp</code> does amixer's four verbs through alsa-lib instead.
+<code>scontents</code> and <code>contents</code> print what amixer prints (alsa-utils'
+<code>show_selem</code> and the high-level control listing, line for line), <code>sset</code>
+echoes the control as amixer does, and <code>cset</code> parses the value as amixer
+does, so the parser established against seventeen units on amixer's output
+stays the one reader. Checked against amixer itself on an alsa-lib control
+plugin answering like the handhelds' cards: both listings byte-identical,
+every write form the code uses landing on the same state. A read is about
+0.04 ms on a desktop. Built without alsa-lib, each verb still runs amixer.</p>
+<p>The reads still run on the poller (<code>audiodev::poll</code>) for the page, behind
+generation counters (<code>mixerGen()</code>, <code>socketGen()</code>), and
+<code>poll::setSynchronous(headless)</code> puts them on the calling thread under
+<code>--shots</code>. alsa-lib's configuration-parser noise goes through the same
+filter as SDL's (<code>rt::hookAlsaErrors</code>).</p>
+<h2 id="2-the-test-signal">2. The test signal</h2>
+<p><code>AUDIO</code> has a <code>Test sound</code> row, so where sound comes out and how loud can
+be checked without leaving for an instrument.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PINGS</strong></td>
+<td>180 ms enveloped sine bursts climbing in octaves, A2 to A8, 120 ms apart. <strong>The default, and the one that is safe to leave running.</strong></td>
+</tr>
+<tr>
+<td><strong>SINE</strong></td>
+<td>the steady 440 the wizard uses. Still right for "does this socket carry sound at all", still the wrong thing to walk away from.</td>
+</tr>
+<tr>
+<td><strong>BURSTS</strong></td>
+<td>the pings' notes, sparser: 150 ms in every 600. The same peaks at a quarter of the heat (<code>TestTone::Signal::Bursts</code>).</td>
+</tr>
+<tr>
+<td><strong>MDFOURIER</strong></td>
+<td>the MDFourier measurement signal, for a recorder: AUDIO's TOOLS opens its own view, which plays it once and exactly (§2.4). Not a sound to listen to, and never on the speaker.</td>
+</tr>
+</tbody>
+</table></div>
+<p>A continuous sine at a working level is the one signal that will cook a
+1-watt handheld speaker, because it is the only one with no duty cycle to
+hide behind — hence bursts by default and a warn color on the constant
+one.</p>
+<p>Octaves rather than a sweep: the judgment is per note and a listener needs
+a moment on each. A small driver rolling off, a cabinet buzzing at one
+note, or an analog stage distorting only at the top all announce themselves
+in a sequence and hide in a single tone.</p>
+<p>The steady sine sits at <strong>−12 dBFS</strong> — the reference MDFourier's sweeps and
+noise share — and so does everything the set-up by ear plays. The pings and
+bursts play at <strong>full scale</strong> where a maximum is judged (SYSTEM LEVELS, past
+the volume, but not on headphones) and as the main page's test sound (at
+the volume): an output's
+maximum is what a full-scale sample produces (<a href="audio-levels.html#maximums">audio-levels.md</a>). Every constant is in milliseconds converted at the running
+rate, so the sequence sounds the same on a card that came back at 44100 as
+on one that gave 48000.</p>
+<h3 id="21-the-sequence-is-a-function-of-the-sample-clock-and-holds-no-state">2.1 The sequence is a function of the sample clock and holds no state</h3>
+<p><code>m_samplePos</code> advances by <code>frames</code> every callback whether the tone plays or
+not, so <strong>which burst is sounding, how far into it, and what the sine is
+doing there are all derived from the sample's number</strong>. Two runs at the
+same sample position are bit-identical. <code>off == 0</code> gives <code>sin(0)</code>, so every
+burst opens at zero by construction rather than by remembering to reset
+something.</p>
+<p>The only state in the whole generator is the epoch — one integer, written
+in one place, when a person picks a signal.</p>
+<p>That is what a generator with history costs. The earlier one walked a
+position that advanced only while the tone played and reset when it did
+not; any hiccup anywhere moved where it thought it was, and it sounded like
+the pings randomly restarting, because they did. The fix is not to chase
+the hiccups. It is to have nothing for a hiccup to disturb.</p>
+<h3 id="22-a-lapse-gaps-the-sound-it-does-not-rewind-the-sequence">2.2 A lapse gaps the sound; it does not rewind the sequence</h3>
+<p>The tone is a <strong>lease</strong>: <code>setTone()</code> renews a 0.35 s hold and the RT side
+drops the tone when it lapses. The renewal is bracketed around the blocking
+work in the page's <code>update()</code>, so only the draw sits between one renewal
+and the next.</p>
+<p>A lapse now leaves a hole, and the sequence carries on wherever the sample
+clock says when the lease is renewed — partway through a burst, if the gap
+cut one. A deliberate choice of signal rewinds to the bottom octave;
+nothing else does.</p>
+<p>A dropped burst stays dropped rather than being replayed, which is the
+better answer for a test signal: a dropout you can hear as a missing ping
+is a dropout you know about. The page and the mixer show a <strong>dropout
+count</strong> beside the signal name when it is not zero, which turns "it stutters" into a
+number.</p>
+<h3 id="23-the-fixtures">2.3 The fixtures</h3>
+<p><code>sndstation --tone-wav &lt;pings|sine&gt; out.wav</code> dumps three
+seconds from <strong>the generator the page plays</strong> (<code>TestTone</code>) — not a second
+implementation written to check the first, which can agree with it while
+both are wrong. Measured that way:</p>
+<pre><code>7 bursts: 107 217 439 878 1756 3517 7039 Hz, 180 ms, 120 ms gaps
+peak 0.2510 = -12.01 dBFS, L == R, edges in 0.0000 out 0.0001
+</code></pre>
+<p><code>sndstation --tone-wav mdfourier[:RATE] out.wav</code> writes the whole MDFourier
+run instead (48 kHz unless a rate is given), from the run MDFOURIER plays,
+and checks it against the reference script's checksum: the reference file a
+recording is analyzed against.</p>
+<p><code>sndstation --tone-wav pings-gap</code> puts two deliberate 400 ms holes mid-sequence,
+<strong>because the plain dump could never catch the lapse bug</strong>: it renews the
+lease every block, so the failing path was unreachable. Every surviving
+burst still lands on its own slot at <code>k × 0.30 s</code> with the frequency that
+slot calls for:</p>
+<pre><code> @0.60s slot 2  ~433 Hz  104ms   &lt;- cut by the gap
+                slot 3           &lt;- swallowed whole: a HOLE, not a rewind
+ @1.20s slot 4 ~1756 Hz  180ms   &lt;- right slot, right note
+ @2.40s slot 8  ~217 Hz  180ms
+</code></pre>
+<p>A fixture that cannot fail is not evidence. That is also where the
+MDFourier sequence gets checked when it arrives. <code>test_testtone</code> checks the
+same property without anyone listening: a run whose lease lapses twice must
+be, wherever it plays, sample for sample the run that never lapsed — and
+fails when the generator is made to rewind.</p>
+<h3 id="24-mdfourier-the-measurement-signal-for-a-recorder">2.4 MDFOURIER: the measurement signal, for a recorder</h3>
+<p><a class="ext" href="https://junkerhq.net/MDFourier/">MDFourier</a> compares a recording of a known
+signal against the signal itself, so the samples have to reach the DAC
+exactly as rendered. The signal is pinobatch's <code>mdfourier-dac</code>, as a C++
+port (<code>src/mdfourier/</code>, zlib) that is bit-exact with the Python original,
+run under the NumPy 1.x it was written for, at 44.1, 48, 88.2, 96, 176.4 and
+192 kHz. Under NumPy 2 the script's pink noise overflows int16 and wraps;
+the port renders that reading too, on a switch (below), and
+<code>src/mdfourier/README.md</code> has the detail. <code>MDFourierRun</code>
+(<code>include/sndstation/mdfourier.h</code>) plays it:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The signal</td>
+<td>sync, a sine sweep and a pulse sweep from 20 Hz at 2 s an octave, white and pink noise, all at <strong>−12 dBFS</strong>; then a square wave fading from <strong>full scale (0 dBFS)</strong>, and sync again. 56.4 s at 44.1 and 48 kHz, 60.4 s at 88.2 and 96, 64.4 s at 176.4 and 192.</td>
+</tr>
+<tr>
+<td>Exact</td>
+<td>the int16 samples go to the device through <code>AudioOut::setExact</code>: after the app's render, in place of it; no dither, no gain, no clip. S16 is a copy and S32 the sample shifted up 16 bits. F32 is converted again after this program, so it is refused.</td>
+</tr>
+<tr>
+<td>Once</td>
+<td>from the first sample to the last, no loop. A starts again from the top.</td>
+</tr>
+<tr>
+<td>Underruns</td>
+<td>any one ends the run, in the audio thread, at the next block: the rest is silence and the view says where it stopped and that the recording is not valid. Counted where alsa-lib reports them (<code>rt::alsaRecoveries</code>); on another driver the run plays but says it was not checked.</td>
+</tr>
+<tr>
+<td>Prepared</td>
+<td>rendered whole on a worker thread when MDFourier is chosen, at the running rate: a few hundred milliseconds and 5 MB at 48 kHz, 22 MB at 192 kHz, given back when the page closes. The audio thread only copies.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The view (<code>launcher/audiomdf.cpp</code>) shows the rate to <strong>record at</strong> in large
+type, with what the device is handed and what the card runs, and refuses to
+start, saying why, when:</p>
+<ul>
+<li>the rate is not one of the six (choose one in <code>Sample rate</code>);</li>
+<li>the card runs at another rate, i.e. ALSA is resampling;</li>
+<li>the output format is f32;</li>
+<li>the sound is going to the speaker (a USB card has none; on a desktop the
+  system decides).</li>
+</ul>
+<p>The first start each time the page is opened asks once: full scale at the
+end, line output to a recorder, nobody's headphones. While it plays the
+page forks nothing (no <code>amixer</code> reads, as for the test tones), and the run
+ends if the device under it changes (a card plugged in, a rate or size
+moved): that is a gap the recorder heard. <code>B</code> stops it; leaving the page
+does too.</p>
+<p>A run that completes says so, and that it had no underruns; the recording
+is then the one to analyze, at the rate shown.</p>
+<p><strong>The reference file.</strong> Preparing the run also writes the whole signal as a
+16-bit .wav on the unit, for the recording to be compared with, and the view
+shows where and whether it is there:</p>
+<pre><code>~/.local/share/sndstation/mdfourier/mdfourier-dac-48000-numpy1.wav
+</code></pre>
+<p>(<code>$XDG_DATA_HOME/sndstation/mdfourier/</code> when that is set.) One file per rate
+and NumPy reading, written once, on the worker, to a temporary name and
+renamed, so a file under the name is always whole; a later prepare finds it
+and leaves it. It is the very render the run plays (<code>test_mdfourier</code> reads
+one back and checks it against the script's checksum), so <code>scp</code> it off, or
+pull the card. <code>sndstation --tone-wav mdfourier[:RATE][:numpy2] out.wav</code>
+writes the same file on a desk.</p>
+<p><strong>Which NumPy.</strong> <code>system.json</code>'s <code>audio.mdfourier_numpy</code> picks how the
+script is read, which decides the pink noise and nothing else:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code> (default)</td>
+<td>NumPy 1.x, what the script was written for: its pink mixer's sum promotes to int64 and never overflows.</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>NumPy 2: the sum stays int16 and wraps; a quarter of the pink noise differs. For matching a reference rendered from the script on a current NumPy.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read when the page opens; the view names the one in force on its REFERENCE
+line, and the file is named for it.</p>
+<p>The checks: <code>test_mdfourier</code> plays every rate, both readings, through the
+run in uneven blocks and compares with the reference checksums, writes and
+reads back a reference file, and checks an underrun's stop;
+<code>test_mdfourier_ref</code> renders each rate with the Python original
+(<code>tests/reference/</code>, needs numpy) and <code>cmp</code>s the files, for NumPy 1.x's
+reading and, where NumPy 2 is installed, for NumPy 2's; <code>test_audiosetup</code>
+opens the view on SDL's disk device and finds the reference file where the
+view says, for each value of the switch; <code>test_audioout</code>
+plays a whole run through SDL's disk driver at S16 and at S32, with dither
+on and the app rendering underneath, and checks what the device was handed.</p>
+<hr />
+<h2 id="3-what-can-and-cannot-be-set-about-the-buffer">3. What can and cannot be set about the buffer</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>period size</td>
+<td><strong>ours, from the page.</strong> <code>Buffer size</code> changes it live. On the stream run here (§3.0) it is the period asked of alsa-lib; on SDL's stream it becomes SDL's <code>samples</code>, which becomes ALSA's period. It is saved in the unit's <code>audio.json</code>: one size for the built-in outputs, and its own for a USB or HDMI card (<a href="audio-page.html#kept-audiojson-version-3">audio-page.md</a>). <code>audio.buffer_frames</code> in <code>system.json</code> is only the default a unit has not changed.</td>
+</tr>
+<tr>
+<td>period count</td>
+<td>two, or the fewest the card allows: the low-latency answer. Every other value adds latency.</td>
+</tr>
+<tr>
+<td>start threshold</td>
+<td><strong>ours</strong> (§3.0): the whole buffer, at the first start and after every underrun.</td>
+</tr>
+<tr>
+<td>sample rate</td>
+<td><strong>ours, from the page.</strong> <code>Sample rate</code> changes it live (§3.2), saved in the unit's <code>audio.json</code> beside the period size; <code>0</code> is Default. <code>audio.sample_rate</code> in <code>system.json</code> is only the default a unit has not changed.</td>
+</tr>
+<tr>
+<td>format, access</td>
+<td>negotiated. A device may hand back something near what was asked, and nothing says so unless <code>/proc/asound</code> is read.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="30-the-stream-is-run-here-on-alsa-lib">3.0 The stream is run here, on alsa-lib</h3>
+<p>On Linux nothing is played through SDL: <code>src/alsastream.cpp</code> opens the
+device with alsa-lib and runs the writer thread itself, whichever device
+it is — the card this program chose, <code>AUDIODEV</code> or <code>alsa_pcm</code> as given,
+or <code>default</code> and whatever the system put behind it (a <code>plug</code>, a <code>dmix</code>, a
+sound server's ALSA plugin, so a server is reached as <code>aplay</code> reaches it).
+SDL's audio is started on its ALSA driver for that, whatever it would
+pick first (a sound server's), and only lists the devices for the log:
+<code>SDL_AUDIODRIVER</code> is set for that one call and taken away again, so
+nothing the program starts inherits it. SDL's stream is left for where
+there is no alsa-lib (macOS, Windows, a build without it), and for an
+<code>SDL_AUDIODRIVER</code> set outside, as the tests' disk driver is. The log says
+which: "the stream run here, on alsa-lib", or why not.</p>
+<p>The reason is the start threshold. SDL's backend sets it to one frame, so
+a stream starts, and starts again after an underrun, with one frame
+queued. At a short period that misses the next deadline at once: one
+underrun becomes thousands a second, each a stop and restart of the card's
+DMA. On an H700 under PREEMPT_RT that storm is a kernel panic
+(<code>sun6i_dma_interrupt</code>, racing a stop), while <code>aplay</code>, which fills the
+whole buffer before it starts again, came through 200 forced underruns at
+32 frames on the same kernel without a mark.</p>
+<p>So the stream does what aplay does:</p>
+<ul>
+<li><strong>start threshold = the buffer</strong>: nothing plays until the buffer is
+  full, at the first start and after every underrun;</li>
+<li>an underrun is recovered with <code>snd_pcm_recover</code> (prepared again, then
+  refilled), which also reports it, so the click count on DIAGNOSTICS is the same;</li>
+<li>the writer <strong>blocks</strong> in <code>snd_pcm_writei</code>, as aplay and SDL do: the
+  kernel waits for exactly the frames still to be written. A non-blocking
+  writer that waits with <code>snd_pcm_wait</code> does not work: a write takes the
+  few frames free between two interrupts, the writes stop lining up with
+  the card's periods, and the wait (for a whole period free) wakes an
+  interrupt late to a buffer nearly empty — on an RK3326 at 256 frames,
+  periods in pairs, no safety margin, underruns by the thousand. A card
+  that stops taking anything is the kernel's to notice (an I/O error after
+  its timeout, <code>deviceStopped</code>); closing drops the stream first, so it
+  never waits on the card.</li>
+</ul>
+<p><code>SNDSTATION_AUDIO_STREAM=sdl</code> (or <code>sndstation-audiotest --sdl</code>) puts SDL's
+stream back on the same device, to compare: a developer's switch, said in
+the log at every open. Each underrun on our stream is
+said in the log, for the first five then every hundred: whether the writer
+was late (more time since its last write than that write left queued) or
+the card ran dry with audio still queued.</p>
+<p>The callback is the same one SDL called: the same conversion, metering,
+timing and realtime raise; a change the callback reads (<code>setExact</code>) is
+made under the stream's fill lock instead of SDL's device lock.</p>
+<h3 id="31-the-sizes-offered-are-the-sizes-the-device-gave">3.1 The sizes offered are the sizes the device gave</h3>
+<p>How finely the period can be set is a property of the driver <em>and</em> the
+hardware, and none of it can be looked up:</p>
+<ul>
+<li>SDL's <strong>ALSA</strong> backend asks for the period <em>nearest</em> the request, and the
+  card decides: a codec can round to multiples of 16 or 64, and a <strong>dmix</strong>
+  default device runs at its own fixed size whatever is asked.</li>
+<li><strong>PipeWire</strong> has a floor (32 frames at 48 kHz); <strong>PulseAudio</strong> takes
+  anything.</li>
+<li><strong>Every other SDL2 backend</strong> (dummy, jack, sndio, OSS) takes powers of
+  two only, and asking one of them for anything else is not merely rounded:
+  SDL 2.26–2.32 computes the buffer size <em>before</em> rounding and never
+  recomputes it, so the callback is handed a buffer sized for 48 frames and
+  told it holds 64. A heap overflow — reproduced with plain SDL on the dummy
+  backend, <code>free(): invalid pointer</code> on close. Only <code>alsa</code>, <code>pulseaudio</code>,
+  <code>pipewire</code> and <code>disk</code> set <code>SupportsNonPow2Samples</code>; on anything else
+  sndstation asks for powers of two only, at startup as well (a
+  <code>buffer_frames</code> of 1000 in <code>system.json</code> used to reach that bug).</li>
+</ul>
+<p>So the first press on <code>Buffer size</code> <strong>asks</strong>: the running device is closed,
+fifteen sizes — the powers of two from 32 to 4096 and the halfway points
+between them, or just the powers of two where those are all it is safe to
+ask — are each opened paused and closed again, and the distinct sizes that
+came back become the choices. A device that rounds to multiples of 64
+offers those; a dmix that only runs at 1024 offers one size and says so.
+The help box lists them. It is a moment of silence, so the page says
+"Asking the device…" in the frame before it happens, and it is done once a
+session.</p>
+<p>Each change after that is a <strong>reopen</strong> at the new size, at the rate already
+running (<code>SDL_AUDIO_ALLOW_FREQUENCY_CHANGE</code> is <em>not</em> passed, so a device
+that comes back at another rate is resampled rather than detuning the
+engine and the plugin). Steps are applied after 0.45 s without a press, so
+holding the d-pad costs one gap, not one per step. The callback takes
+whatever frame count it is handed and the plugin path slices to the block
+the plugin was activated with, so nothing downstream has to be rebuilt. The
+timing counters reset on a reopen, which makes the row's "no clicks / N
+clicks" a verdict on the size on screen.</p>
+<h3 id="32-the-rate-default-first-then-what-the-device-gave">3.2 The rate: Default first, then what the device gave</h3>
+<p>SDL2 has no call that lists a device's rates, so they are found the same
+way as the buffer sizes: on the first press the running device is closed,
+the common rates (22.05, 32, 44.1, 48, 88.2, 96 and 192 kHz, plus whatever
+Default resolves to) are each opened with the rate <em>allowed to move</em>, and
+the distinct rates that came back are the choices. ALSA's plug layer and
+the sound servers resample and so take all of them; a raw <code>hw:</code> device
+offers its own; a dmix offers one.</p>
+<p><strong>Default</strong> comes first, and is what ships (<code>sample_rate: 0</code>). It is not
+SDL's default — asked for a rate of zero, SDL picks 22050 — but the
+device's own rate where SDL can report one, which only the PipeWire and
+PulseAudio backends do (<code>SDL_GetDefaultAudioInfo</code>), so nothing is
+converted between the program and the server. Everywhere else, ALSA
+included, it is 48 kHz: the rate the program always asked for before. It
+stays a separate choice even when it resolves to a number also in the
+list, because it is a different promise — "whatever this device prefers"
+follows the device; 48 kHz picked by number stays 48 kHz.</p>
+<p>A change of rate is a reopen at the new rate <em>with the buffer size kept</em>.
+On the page that is the whole of it — it plays nothing but its tone. An app
+that changes rate while running (<code>AudioOut::setRate</code>) hears about it in its
+rate callback while the device is still paused, and re-prepares everything
+that turned the old rate into a constant: clocks, synths, a hosted plugin
+(deactivated and activated again at the new rate, which keeps its patch where
+a reload would lose it). Voices already sounding are best released, having
+been started at the old rate. <code>AudioOut::sampleRate()</code> returns the running
+rate, not the one asked for, which a device allowed to move it could make
+wrong.</p>
+<p>Measured through the real callback on SDL's disk backend: the test sine
+reads 440.00 Hz at 22.05, 44.1, 48 and 96 kHz after every sequence of
+changes tried, at -12 dBFS throughout.</p>
+<p>Which is why <code>DIAGNOSTICS</code> prints <strong>ASKED FOR</strong> and <strong>GOT</strong> on adjacent
+lines.
+The numbers come from <code>/proc/asound/cardN/pcmNp/subN/hw_params</code> and
+<code>status</code> — <strong>no device is opened to ask</strong>, so nothing is disturbed, and the
+stream is found by looking for the one that is not <code>closed</code>, on whichever
+card it turned out to be.</p>
+<p>The row worth watching is <strong>WORST MARGIN</strong>: <code>buffer_size - avail_max</code>.
+<code>avail_max</code> is the high-water mark of how empty the buffer ever got, so
+this is the distance from an xrun the run has <em>actually survived</em>, as
+opposed to the nominal figure. It turns warn-colored below one period,
+which is one late wakeup from a dropout.</p>
+<p><code>DIAGNOSTICS</code> also measures the callback itself — gap, render time, and a
+count of late arrivals (&gt;1.5 periods) — with <code>SDL_GetPerformanceCounter</code>,
+which is a vDSO read and safe from a callback.</p>
+<p>What it calls a <strong>click</strong>, there and on the Buffer size row, is an
+<strong>underrun</strong> as alsa-lib reports it: the stream (§3.0, or SDL's ALSA
+backend) recovers every one with <code>snd_pcm_recover</code>, which reports it, and the program counts those
+reports for the whole run (<code>rt::alsaRecoveries</code>). Late callbacks are kept
+as their own row and are not the same thing: a Powkiddy RGB30 (RK3566)
+delivers its callbacks in pairs — two together, then a double gap — and
+scored 1100 "late" in a ping test that underran about 10 times. Where
+alsa-lib cannot say (not ALSA), late callbacks are the only stand-in, and
+the page says "likely".</p>
+<p>The same handler is installed <strong>before</strong> SDL starts its audio (so it also
+catches SDL's first device listing), and it hides alsa-lib's
+configuration-parser messages: everything from its <code>conf.c</code> and
+<code>confmisc.c</code>. SDL lists every device at startup and again every five
+seconds, and alsa-lib tries each standard definition (hdmi, surround,
+iec958…) against every card, complaining about each that does not fit: a
+two-card RGB30 printed dozens of <code>Unknown parameter CARD</code> a scan, none
+about anything playing. One line says they are hidden;
+<code>SNDSTATION_ALSA_VERBOSE=1</code> shows them, for debugging an <code>asound.conf</code>
+of one's own. Everything else alsa-lib says, <code>underrun occurred</code>
+included, prints as before.</p>
+<p><strong>Raise <code>Buffer size</code> first</strong> if it reports underruns. 512
+doubles the margin and costs 5 ms; on a box where the UI, Mesa and a forked
+<code>amixer</code> all compete for four cores, that is usually the difference between
+clicking and not.</p>
+<p>The audio thread runs <strong><code>SCHED_FIFO</code> 70</strong> (<code>audio.realtime_priority</code>;
+0 = an ordinary thread), raised by the thread itself on its first
+callback, and may be pinned to a core (<code>audio.cpu</code>). It needs an rtprio
+allowance, which the package grants the <code>audio</code> group on a handheld; without one the raise
+is refused and DIAGNOSTICS shows the thread as ordinary, in the warning
+color. What it changes was measured, not assumed: see
+<a href="rt-bench.html"><code>rt-bench.md</code></a>.</p>
+<h3 id="33-which-alsa-device-the-card-itself-not-default">3.3 Which ALSA device: the card itself, not <code>default</code></h3>
+<p>sndstation opens <strong><code>hw:&lt;card&gt;,0</code></strong> rather than <code>default</code>. The stream run
+here (§3.0) opens the device it is named; for SDL, which reads <code>AUDIODEV</code>
+at every open, the same name is set there after the audio subsystem is up
+and before the first open, so a probe or a reopen through SDL uses the
+same device.</p>
+<p>The variable belongs to the process, and every program it starts inherits
+it. So the last <code>AudioOut</code> to close puts it back as the process found it:
+unset, or what was set outside. An app the launcher starts afterward
+chooses its card by the rule below, as it would started from a shell,
+rather than taking the launcher's choice for a user's (rule 1), and
+playing through SDL's own ALSA stream instead of its own.</p>
+<p><code>default</code> on a system with no ALSA configuration is alsa-lib's <code>plug</code> over
+that same card. It offers nothing to share — there is no dmix in it — and
+<code>plug</code> drives the card through <strong>MMAP</strong>. On an RG351V (RK3326, mainline
+6.12 and 7.1) that path underran steadily at 48 kHz / 256 frames with the
+built-in synth alone, at a few percent CPU, under <code>SCHED_FIFO</code> 80 as well.
+Opened as <code>hw:0,0</code> the same program was clean. <code>hw_params</code> under both
+showed the same rate, format (<code>S32_LE</code>), period (256) and buffer (512);
+the only difference was <code>access</code>: <code>MMAP_INTERLEAVED</code> through <code>plug</code>,
+<code>RW_INTERLEAVED</code> from SDL's own <code>snd_pcm_writei</code> on <code>hw</code>. The samples
+arrive already in an integer format (§3.4), so nothing is lost by skipping
+<code>plug</code>, and the AUDIO page's rates and sizes become the card's real ones.</p>
+<p>The rule, in order:</p>
+<ol>
+<li><strong><code>AUDIODEV</code> set in the environment</strong> — used as given.</li>
+<li><strong><code>audio.alsa_pcm</code> in system.json</strong>, if not empty — used as given,
+   <code>"default"</code> included.</li>
+<li><strong>Plays on names a card</strong> (USB or HDMI) that is plugged in — that card.
+   Not plugged in, Automatic until it is. Plays on one of the built-in
+   card's outputs takes the built-in card (rule 6) whatever is plugged in.</li>
+<li><strong>Plays on is Automatic (the default) and a USB card that plays is
+   plugged in</strong> — that card. Someone plugged it in to hear it.</li>
+<li><strong>This system configures ALSA</strong> (<code>/etc/asound.conf</code>, <code>~/.asoundrc</code>,
+   <code>$XDG_CONFIG_HOME/alsa/asoundrc</code>, a non-empty <code>/etc/alsa/conf.d</code> or
+   <code>/usr/share/alsa/alsa.conf.d</code>) — <code>default</code>. Somebody may have put dmix,
+   softvol or a sound server behind it on purpose.</li>
+<li>Otherwise <code>hw:CARD=&lt;id&gt;,DEV=0</code>: the card named by <code>ALSA_PCM_CARD</code> or
+   <code>ALSA_CARD</code> if one is set, else the <strong>first card that is not a display
+   output</strong> (HDMI, DisplayPort, S/PDIF), named by its id so a change in
+   probe order cannot move it. Not card 0: on a Powkiddy RGB30 (RK3566)
+   card 0 is HDMI and the speaker codec is card 1, and "card 0" played to
+   a cable nobody had plugged in. Nor a <strong>virtual</strong> card: on an H700 image
+   that loads <code>snd-aloop</code>, card 0 is ALSA's Loopback, which plays into
+   nothing. ALSA has no word for "real hardware"; sysfs does. A real
+   card's device (<code>/sys/class/sound/cardN/device</code>) hangs off a bus (USB,
+   PCI, an SoC's) or has a firmware node (<code>of_node</code> from the device tree,
+   <code>firmware_node</code> from ACPI); a made-up one is a platform device straight
+   under <code>/sys/devices/platform</code> with neither (<code>snd_aloop.0</code>,
+   <code>snd_dummy.0</code>, <code>snd_virmidi.0</code>). Where sysfs cannot say, the driver's
+   name does (Loopback, Dummy, VirMIDI). A virtual card is taken only when
+   named, or when there is no hardware at all. With nothing but display outputs, the first of them.</li>
+</ol>
+<p>A card picked by rule 3 or 4 that will not open (busy, or a USB card whose
+<code>/dev/snd</code> node udev has not finished with) falls back to the built-in
+card, and is tried again two seconds later. A device picked by rule 2, 3,
+4 or 6 that still will not open gets one retry on <code>default</code>, so a wrong
+guess costs the log a line, not the program its sound. The log says which
+device was used and why.</p>
+<p><strong>USB cards say what they take.</strong> <code>/proc/asound/cardN/stream0</code> lists every
+format and rate of a USB card's endpoints, and <code>src/audiocard.cpp</code> reads it
+(nothing is opened to ask). Two things follow from it:</p>
+<ul>
+<li><strong>Format.</strong> SDL2 has no 24-bit packed format. A card that offers none SDL
+  knows — a Dirtywave M8 takes <code>S24_3LE</code> and nothing else — cannot be
+  opened on <code>hw</code> at all ("Couldn't find any hardware audio formats"), so it
+  is opened as <code>plughw:CARD=&lt;id&gt;,DEV=0</code> and handed <code>s32</code> (an <code>s16</code> setting
+  would drop eight bits that plug then pads back). Plug's conversion from
+  S32 to S24_3LE is a truncation of bits the DAC never had. A card that
+  takes any SDL format stays on <code>hw</code>.</li>
+<li><strong>Rate.</strong> "Default" is 48000 when the card takes it, else the card's own
+  (the M8's 44100), and a pinned rate the card does not take is replaced
+  the same way. Through plughw anything would open — resampled by
+  alsa-lib's linear converter — so <code>setRate</code> and the AUDIO page's rate
+  list are held to what the card lists.</li>
+</ul>
+<p>The log then says what the card <strong>actually</strong> runs at, from its
+<code>hw_params</code>: <code>audio: card M8 runs S24_3LE, 2 ch, 44100 Hz (plughw converts
+from S32)</code>. <code>AudioOut::cardFormat()</code> and <code>cardRate()</code> carry the same.</p>
+<p><strong>Hotplug.</strong> An app calls <code>AudioOut::service()</code> once a frame. A device SDL
+marks stopped (a USB card pulled mid-period: the write returns ENODEV and
+SDL gives the device up) is noticed at once, and <code>/proc/asound/cards</code> is
+read twice a second. When the card rule 3 or 4 would choose differs from
+the one playing, the device is closed and opened on the new one; a rate
+that moved goes to the app's RateFn with the device paused, the same as a
+rate change from the AUDIO page. Only a PCM this program chose is moved:
+rules 1 and 2 are left alone.</p>
+<p><strong>A USB card's own volume.</strong> Many come up with their playback level at the
+bottom, so the first time a USB card is played to, a <code>PCM</code> or <code>Master</code>
+playback level at 0% is raised to 50%, <strong>once</strong>. (On a real M8 set to 0%
+this raised <code>PCM</code> to 128 of 255; the M8 then kept 50% across a cable pull
+and replug. The M8 has two controls both named <code>PCM</code>, and only the first,
+<code>'PCM',0</code>, is reached.) The unit's audio.json records it under the card's
+endpoint (<code>usb:&lt;vendor&gt;:&lt;product&gt;</code>, <code>"raised": true</code>), and a card with that
+record is never touched again on this unit: a level turned down afterward
+stays down. No other level is touched; a USB interface's other playback
+levels are often input monitoring.</p>
+<p><strong>More than two channels.</strong> The stream file lists each endpoint's
+channel count (<code>Channels: 24</code>). <code>audiocard</code> keeps them per direction
+(<code>Card::channels</code>, <code>Card::capChannels</code>), and CARDS shows them:
+<code>Plays S24_3LE 2 ch 44.1 kHz · Records S24_3LE 24 ch 44.1 kHz</code>. AudioOut
+plays stereo and asks for 2 channels, so a card whose playback is 2
+channels is used exactly as before. sndstation does not record; a card's
+capture channels are listed for the person choosing, and an app that
+records opens them itself (<code>hw:CARD=M8,DEV=0</code>, all channels at once).</p>
+<p>A Dirtywave M8 in its <strong>multichannel USB mode</strong> (SYSTEM → USB AUDIO MODE,
+firmware 6.5.0 and later) is that case. It still plays 2 channels, and
+records 24. Dirtywave's channel order is:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Channels</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1–2</td>
+<td>main mix</td>
+</tr>
+<tr>
+<td>3–18</td>
+<td>tracks 1–8, a stereo pair each</td>
+</tr>
+<tr>
+<td>19–20</td>
+<td>mod FX</td>
+</tr>
+<tr>
+<td>21–22</td>
+<td>delay</td>
+</tr>
+<tr>
+<td>23–24</td>
+<td>reverb</td>
+</tr>
+</tbody>
+</table></div>
+<p>Switch the mode, then unplug and replug the M8 so the kernel reads the new
+endpoints. In this mode the M8 is a different USB product, <code>16c0:048b</code>
+(stereo mode is <code>16c0:048a</code>), so audio.json keeps a separate first-sight
+record for it. Its <code>'PCM',0</code> then has eight channels: front left and right
+at 50%, the other six at 0%. The volume raise looks at the first channel,
+so it leaves them alone.</p>
+<p>Measured on the SP (2026-10-17), with a song playing on the M8 and
+AudioOut playing a 440 Hz tone to it at about -14 dBFS:</p>
+<ul>
+<li><strong>Playback:</strong> plughw, S24_3LE, 44.1 kHz, 0 xruns.</li>
+<li><strong>Recording:</strong> all 24 channels carry the song, and each track's pair reads the
+  same on both sides.</li>
+<li>main: -7 dBFS peak</li>
+<li>tracks: -15 to -27</li>
+<li>mod FX, delay, reverb: -38 to -42</li>
+<li><strong><code>InputMeter</code>:</strong> reading the same channels, it agreed to within a dB.</li>
+<li><strong>Our tone:</strong> it was not in the recorded main mix (440 Hz at -66 dB): what
+  the M8 receives over USB does not come back in its multichannel capture,
+  or its USB-input level was down.</li>
+<li><strong>USB I/O view:</strong> on the SP with the M8 plugged in, it names the card and
+  its formats and labels the meters MAIN, T1–T8, MOD, DLY, REV.</li>
+</ul>
+<p><code>--fake-audio m8multi</code> answers as the SP with the M8 in this mode.</p>
+<p>A card that plays more than 2 channels and not 2 (an 8-out interface with
+no stereo altset) has not been tried: hw would refuse SDL's 2 channels, and
+plughw's channel routing has not been measured.</p>
+<h3 id="34-what-the-device-is-handed-and-where-it-clips">3.4 What the device is handed, and where it clips</h3>
+<p>Everything up to the device is float: the engine, the internal synths, a
+hosted plugin, the host hooks. Full scale is ±1.0, and something has to
+decide what happens to a sample past it. The internal synths never get
+there — their limiter (<code>limiter.h</code>) bends to a ceiling of 1.0 — but a
+plugin, the hooks and the click are summed in unlimited, on purpose.</p>
+<p><code>audio.output_format</code> (<code>--audio-format</code> for one run) says who converts:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>converted by</th>
+<th>an over</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>s16</code> (shipped)</td>
+<td>this program, <code>AudioOut::toDevice</code> (SDK)</td>
+<td>clipped flat here</td>
+</tr>
+<tr>
+<td><code>s32</code></td>
+<td>this program</td>
+<td>clipped flat here</td>
+</tr>
+<tr>
+<td><code>f32</code></td>
+<td>alsa-lib's <code>plug</code>, or a sound server (SDL, on SDL's stream)</td>
+<td>the converter clips it; a server may turn it down first</td>
+</tr>
+</tbody>
+</table></div>
+<p>With <code>s16</code>/<code>s32</code> the clip happens in the loop that counts it, so the count
+means the same on every driver: through PipeWire or PulseAudio an over is
+no longer quietly rescued by the server's own volume. SDL 2.32's own
+F32→S16/S32 converters saturate too (<code>SDL_audiotypecvt.c</code>), so on ALSA <code>hw</code>
+<code>f32</code> clips at the same place — just out of sight. The device is opened
+without <code>SDL_AUDIO_ALLOW_FORMAT_CHANGE</code>, so SDL delivers exactly the asked
+format; on a card that wants another integer width it widens S16 losslessly.</p>
+<p><code>s16</code> is dithered (<code>audio.dither</code>): two uniform draws a sample, differenced
+— one step of triangular noise, from a xorshift32 — which turns 16-bit
+rounding's low-level distortion into a steady hiss about 90 dB down.
+<code>s32</code> is not; its step is far below any DAC's.</p>
+<p>The same loop measures the peak for the HUD ladder and counts the overs:
+the square at the top right of the ladder lights red for two seconds after
+any block went over, and AUDIO / DIAGNOSTICS says how many and
+how far (<code>Clipped: 37 blocks · worst +1.8 dB over full scale</code>), beside
+what the device is handed (<code>Samples</code>). NaN is not looked for: a plugin that
+outputs it is broken, and the check would cost every sample.</p>
+<p>Checked through SDL's <code>disk</code> driver, which writes what the device is
+handed: the same chord in all three formats measured peak 0.3212 and RMS
+0.0763-0.0764 once scaled back.</p>
+<h3 id="35-with-no-device-the-apps-own-clock">3.5 With no device: the app's own clock</h3>
+<p>A headless run, or one where no device would open, has no callback. The
+app calls <code>AudioOut::pumpManual(dt)</code> from its own loop instead, with the
+seconds since the last call, and the render function runs as the callback
+would have run it: the volume, <code>setExact</code>'s samples and the peak meter
+included. With a device running it does nothing.</p>
+<p><code>dt</code> seconds is rarely a whole number of samples. At 48 kHz a 60 Hz loop
+is 800 a frame, but a 144 Hz one is 333.33…, and a loop pumped in small
+steps may be owed less than one sample a call. So the fraction left over
+is carried to the next call rather than dropped. Dropped, the 144 Hz clock
+would run a third of a sample slow every frame, and a small enough step
+would never render anything at all. Carried, the samples rendered over a
+run match the time that passed, to within one.</p>
+<p>A call renders at most 4096 frames. What a long stall is owed beyond that is
+dropped, not carried: the run's clock loses that time rather than catching
+up in a burst. A <code>dt</code> that is zero, negative or not finite is ignored. The carry
+starts again at each <code>open()</code>.</p>
+<h3 id="36-opening-and-closing-the-fades">3.6 Opening and closing: the fades</h3>
+<p>A stream started at full level, or cut there, is a step, and a speaker
+plays a step as a click. So the sound comes in from silence over
+<code>AudioOut::FADE_MS</code> (5 ms, 240 frames at 48 kHz) after every start, and
+goes out over the same before every close, <code>reopen()</code>, <code>setRate()</code>, rate
+or size probe, and card move. The gain is applied in the callback after
+the volume and before the conversion, so the meter and the over count see
+what the device gets.</p>
+<p>A fade out is played, not just computed: <code>close()</code> and the rest wait
+until the gain is at 0 and three whole callbacks have gone out silent, by
+when whatever the device still held of the slope has played too (two
+periods of buffer, and one more). That costs a close about three periods
+and the fade; it waits at most 100 ms past that for a callback that never
+comes. A device not started, stopped or playing the exact path
+(<code>setExact</code>, MDFourier) is closed at once: there is nothing to fade, and
+the exact path's samples are never touched. The destructor does not wait
+either: the app the render function belongs to may already be going, so
+an app that wants the fade calls <code>close()</code>.</p>
+<p>What a fade cannot remove is what the hardware does when a device opens or
+closes: a codec that powers its output down some seconds after the close
+(ASoC's <code>pmdown_time</code>, 5 s by default; a late pop on some H700 units) still
+clicks then. Keeping the device open is the remedy for that, not the fade.</p>
+<p><code>test_audioout</code> reads what the device was handed (SDL's disk driver):
+the slope in and out, each about 240 frames, no step larger than a slope's,
+and the silence before the close.</p>
+<h2 id="4-where-plug-detection-is-read-four-doors">4. Where plug detection is read: four doors</h2>
+<p><code>audiodev::readSocket()</code> answers "is something in the headphone socket?"
+There is no one place a Linux handheld says so, so it tries every door,
+keeps what each one said in <code>Socket::scanned</code>, and takes the first usable
+one in this order of confidence:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>kind</th>
+<th>door</th>
+<th>why it is where it is in the order</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>alsa</code></td>
+<td>the card's read-only BOOLEAN jack kcontrols (<code>amixer contents</code>)</td>
+<td>set by the same driver that decides where the audio goes</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>evdev nodes with <code>SW_HEADPHONE_INSERT</code>, <code>SW_LINEOUT_INSERT</code>, <code>SW_MICROPHONE_INSERT</code> or <code>SW_JACK_PHYSICAL_INSERT</code></td>
+<td>a copy of the codec's state, and on some clones a copy that was never wired up</td>
+</tr>
+<tr>
+<td><code>extcon</code></td>
+<td><code>/sys/class/extcon</code></td>
+<td>older vendor kernels</td>
+</tr>
+<tr>
+<td><code>switch</code></td>
+<td><code>/sys/class/switch</code> (Android's switch class)</td>
+<td>older vendor kernels still</td>
+</tr>
+</tbody>
+</table></div>
+<p>The <strong>input</strong> door is read through <a href="device-events.html">device events</a>:
+<code>readSocket()</code> opens a one-shot <code>DeviceEvents</code> scan of <code>/dev/input</code>, with
+no hotplug watch and no hallkey door, and <code>audiodev::inputSockets()</code> turns
+its rows into <code>SocketSource</code>s. That leaves one evdev switch reader in the
+SDK. Each node that carries a jack switch becomes a row like
+<code>HEADPHONE=1 MIC=0</code>, listing every jack switch it has with its state. A
+node whose HEADPHONE bit never moves while its LINEOUT bit does is a
+diagnosis, and only the full list shows it. A node with only LINEOUT or JACK
+is still offered. A node that couldn't be opened is kept with its error, so
+"denied: join group 'input'" can be said instead of "no jack found". Nodes
+with no jack switch are left out.</p>
+<p><code>--fake-audio</code> snapshots answer from the ALSA door alone, so they never
+reach this one. <code>inputSockets()</code> is public so it can be tested on rows
+instead of a unit, in <code>tests/test_deviceevents.cpp</code>.</p>
+    <p class="foot">From <code>docs/audio-device.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

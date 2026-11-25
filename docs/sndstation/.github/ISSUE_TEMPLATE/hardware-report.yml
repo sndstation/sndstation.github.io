@@ -1,0 +1,96 @@
+# Draft for #144.
+name: Hardware report
+description: What worked and what did not on a real unit.
+labels: ["hardware"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One report per unit and image. How to measure and what to include: docs/hardware/reporting.md.
+  - type: input
+    id: unit
+    attributes:
+      label: Unit model
+      description: The model on the case, for example Anbernic RG35XX SP.
+    validations:
+      required: true
+  - type: input
+    id: slot
+    attributes:
+      label: Slot
+      description: The unit's slot number in docs/hardware/supported.md.
+    validations:
+      required: true
+  - type: input
+    id: soc
+    attributes:
+      label: SoC
+      description: The CPU row on ABOUT, for example Rockchip RK3326.
+    validations:
+      required: true
+  - type: dropdown
+    id: image
+    attributes:
+      label: Image it runs
+      options:
+        - sndstation rootfs
+        - ROCKNIX
+        - stock BSP
+        - other (say which below)
+    validations:
+      required: true
+  # TODO(#236/#124): how an image states its own version.
+  - type: input
+    id: image-version
+    attributes:
+      label: Image name or date
+      description: The name or date of the image the unit runs.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: sndstation version
+      description: From ABOUT, or the release tag.
+    validations:
+      required: true
+  - type: input
+    id: unit-id
+    attributes:
+      label: Unit id
+      description: The SOC ID row on ABOUT.
+    validations:
+      required: true
+  - type: textarea
+    id: rtbench
+    attributes:
+      label: "`--rt-bench` output"
+      description: The whole output of each run (docs/hardware/reporting.md says how). If you could not run it, say why.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: must-show
+    attributes:
+      label: What the slot's "must show" says
+      description: One line per item in the unit's private-beta issue, each marked shown, not shown, or could not be tried.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Config files
+      description: Paste or attach ~/.config/sndstation/gamepads.json if Map this controller saved it, and the `rings` entry `sndstation --led-slots` printed.
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked
+    validations:
+      required: true
+  - type: textarea
+    id: failed
+    attributes:
+      label: What did not work
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true

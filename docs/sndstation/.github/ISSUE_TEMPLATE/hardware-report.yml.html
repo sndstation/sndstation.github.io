@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>hardware-report.yml · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-root="../../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="../../docs/getting-started/images.html">Getting an image, and going back</a></li><li><a href="../../docs/getting-started/installation.html">Installation</a></li><li><a href="../../docs/getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="../../docs/hardware/supported.html">Supported hardware</a></li><li><a href="../../docs/hardware/known-issues.html">Known issues</a></li><li><a href="../../docs/hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="../../docs/usb-networking.html">USB networking</a></li><li><a href="../../docs/launcher.html">The sndstation launcher and session</a></li><li><a href="../../docs/updates.html">Software packages</a></li><li><a href="../../docs/rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="../../docs/audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="../../docs/audio-stack.html">The audio stack</a></li><li><a href="../../docs/audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="../../docs/gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="../../docs/unit-identity.html">Which unit this is</a></li><li><a href="../../docs/stick-leds.html">The lights around the analog sticks</a></li><li><a href="../../docs/device-events.html">Device events</a></li><li><a href="../../docs/midi.html">MIDI devices</a></li><li><a href="../../docs/audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../../SECURITY.html">Security policy</a></li><li><a href="../../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../../SUPPORT.html">Support</a></li><li><a href="hardware-report.yml.html" aria-current="page">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../../index.html">Docs</a> / Project</p>
+<h1>hardware-report.yml</h1>
+<p class="lede"><code>.github/ISSUE_TEMPLATE/hardware-report.yml</code> in sndstation, 96 lines · <a href="hardware-report.yml" download>download</a></p>
+<pre class="source"><code class="language-yaml"><span class="ln" id="L1"># Draft for #144.</span>
+<span class="ln" id="L2">name: Hardware report</span>
+<span class="ln" id="L3">description: What worked and what did not on a real unit.</span>
+<span class="ln" id="L4">labels: [&quot;hardware&quot;]</span>
+<span class="ln" id="L5">body:</span>
+<span class="ln" id="L6">  - type: markdown</span>
+<span class="ln" id="L7">    attributes:</span>
+<span class="ln" id="L8">      value: |</span>
+<span class="ln" id="L9">        One report per unit and image. How to measure and what to include: docs/hardware/reporting.md.</span>
+<span class="ln" id="L10">  - type: input</span>
+<span class="ln" id="L11">    id: unit</span>
+<span class="ln" id="L12">    attributes:</span>
+<span class="ln" id="L13">      label: Unit model</span>
+<span class="ln" id="L14">      description: The model on the case, for example Anbernic RG35XX SP.</span>
+<span class="ln" id="L15">    validations:</span>
+<span class="ln" id="L16">      required: true</span>
+<span class="ln" id="L17">  - type: input</span>
+<span class="ln" id="L18">    id: slot</span>
+<span class="ln" id="L19">    attributes:</span>
+<span class="ln" id="L20">      label: Slot</span>
+<span class="ln" id="L21">      description: The unit&#x27;s slot number in docs/hardware/supported.md.</span>
+<span class="ln" id="L22">    validations:</span>
+<span class="ln" id="L23">      required: true</span>
+<span class="ln" id="L24">  - type: input</span>
+<span class="ln" id="L25">    id: soc</span>
+<span class="ln" id="L26">    attributes:</span>
+<span class="ln" id="L27">      label: SoC</span>
+<span class="ln" id="L28">      description: The CPU row on ABOUT, for example Rockchip RK3326.</span>
+<span class="ln" id="L29">    validations:</span>
+<span class="ln" id="L30">      required: true</span>
+<span class="ln" id="L31">  - type: dropdown</span>
+<span class="ln" id="L32">    id: image</span>
+<span class="ln" id="L33">    attributes:</span>
+<span class="ln" id="L34">      label: Image it runs</span>
+<span class="ln" id="L35">      options:</span>
+<span class="ln" id="L36">        - sndstation rootfs</span>
+<span class="ln" id="L37">        - ROCKNIX</span>
+<span class="ln" id="L38">        - stock BSP</span>
+<span class="ln" id="L39">        - other (say which below)</span>
+<span class="ln" id="L40">    validations:</span>
+<span class="ln" id="L41">      required: true</span>
+<span class="ln" id="L42">  # TODO(#236/#124): how an image states its own version.</span>
+<span class="ln" id="L43">  - type: input</span>
+<span class="ln" id="L44">    id: image-version</span>
+<span class="ln" id="L45">    attributes:</span>
+<span class="ln" id="L46">      label: Image name or date</span>
+<span class="ln" id="L47">      description: The name or date of the image the unit runs.</span>
+<span class="ln" id="L48">    validations:</span>
+<span class="ln" id="L49">      required: true</span>
+<span class="ln" id="L50">  - type: input</span>
+<span class="ln" id="L51">    id: version</span>
+<span class="ln" id="L52">    attributes:</span>
+<span class="ln" id="L53">      label: sndstation version</span>
+<span class="ln" id="L54">      description: From ABOUT, or the release tag.</span>
+<span class="ln" id="L55">    validations:</span>
+<span class="ln" id="L56">      required: true</span>
+<span class="ln" id="L57">  - type: input</span>
+<span class="ln" id="L58">    id: unit-id</span>
+<span class="ln" id="L59">    attributes:</span>
+<span class="ln" id="L60">      label: Unit id</span>
+<span class="ln" id="L61">      description: The SOC ID row on ABOUT.</span>
+<span class="ln" id="L62">    validations:</span>
+<span class="ln" id="L63">      required: true</span>
+<span class="ln" id="L64">  - type: textarea</span>
+<span class="ln" id="L65">    id: rtbench</span>
+<span class="ln" id="L66">    attributes:</span>
+<span class="ln" id="L67">      label: &quot;`--rt-bench` output&quot;</span>
+<span class="ln" id="L68">      description: The whole output of each run (docs/hardware/reporting.md says how). If you could not run it, say why.</span>
+<span class="ln" id="L69">      render: shell</span>
+<span class="ln" id="L70">    validations:</span>
+<span class="ln" id="L71">      required: true</span>
+<span class="ln" id="L72">  - type: textarea</span>
+<span class="ln" id="L73">    id: must-show</span>
+<span class="ln" id="L74">    attributes:</span>
+<span class="ln" id="L75">      label: What the slot&#x27;s &quot;must show&quot; says</span>
+<span class="ln" id="L76">      description: One line per item in the unit&#x27;s private-beta issue, each marked shown, not shown, or could not be tried.</span>
+<span class="ln" id="L77">    validations:</span>
+<span class="ln" id="L78">      required: true</span>
+<span class="ln" id="L79">  - type: textarea</span>
+<span class="ln" id="L80">    id: config</span>
+<span class="ln" id="L81">    attributes:</span>
+<span class="ln" id="L82">      label: Config files</span>
+<span class="ln" id="L83">      description: Paste or attach ~/.config/sndstation/gamepads.json if Map this controller saved it, and the `rings` entry `sndstation --led-slots` printed.</span>
+<span class="ln" id="L84">  - type: textarea</span>
+<span class="ln" id="L85">    id: worked</span>
+<span class="ln" id="L86">    attributes:</span>
+<span class="ln" id="L87">      label: What worked</span>
+<span class="ln" id="L88">    validations:</span>
+<span class="ln" id="L89">      required: true</span>
+<span class="ln" id="L90">  - type: textarea</span>
+<span class="ln" id="L91">    id: failed</span>
+<span class="ln" id="L92">    attributes:</span>
+<span class="ln" id="L93">      label: What did not work</span>
+<span class="ln" id="L94">      description: What you did, what you expected, and what happened instead.</span>
+<span class="ln" id="L95">    validations:</span>
+<span class="ln" id="L96">      required: true</span></code></pre>
+    <p class="foot">From <code>.github/ISSUE_TEMPLATE/hardware-report.yml</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../../search-index.js" defer></script>
+<script src="../../../assets/search.js" defer></script>
+</body>
+</html>

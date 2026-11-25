@@ -30,7 +30,11 @@
 <div class="layout">
   <nav class="side" aria-label="Pages">
 <div class="side-group"><ul><li><a href="../../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
 <div class="side-group"><span class="group">Getting started</span><ul><li><a href="images.html">Getting an image, and going back</a></li><li><a href="installation.html" aria-current="page">Installation</a></li><li><a href="quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="../hardware/supported.html">Supported hardware</a></li><li><a href="../hardware/known-issues.html">Known issues</a></li><li><a href="../hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="../usb-networking.html">USB networking</a></li><li><a href="../launcher.html">The sndstation launcher and session</a></li><li><a href="../updates.html">Software packages</a></li><li><a href="../rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="../audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="../audio-stack.html">The audio stack</a></li><li><a href="../audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="../gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="../unit-identity.html">Which unit this is</a></li><li><a href="../stick-leds.html">The lights around the analog sticks</a></li><li><a href="../device-events.html">Device events</a></li><li><a href="../midi.html">MIDI devices</a></li><li><a href="../audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../../SECURITY.html">Security policy</a></li><li><a href="../../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../../SUPPORT.html">Support</a></li><li><a href="../../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
 <div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
   </nav>
   <main id="main" class="prose">
@@ -42,20 +46,20 @@
 </blockquote>
 <h2 id="from-flashing-a-card-to-the-launcher">From flashing a card to the launcher</h2>
 <p>For private-beta testers. You need a supported unit
-(<span>supported.md</span>) and an SD card.</p>
+(<a href="../hardware/supported.html">supported.md</a>) and an SD card.</p>
 <ol>
 <li><strong>Get the image</strong> for your unit and keep the stock card or image it
    first: <a href="images.html">images.md</a>.</li>
 <li><strong>Flash the card</strong> and put it in the unit: <a href="images.html">images.md</a>.</li>
 <li><strong>Switch on.</strong> The unit boots into the launcher on its own screen: the
    install sets tty1 to log the user in and run <code>sndstation-session</code>
-   (<span>launcher.md</span>, "Booting into it").</li>
+   (<a href="../launcher.html">launcher.md</a>, "Booting into it").</li>
 <li><strong>Check it</strong> as in <a href="#verifying">Verifying</a>.</li>
 <li>On the first run, the launcher asks to map the pad if it does not know
    it, and to set up the sound by ear. Both can be skipped and done later
    from Controls and Audio.</li>
 <li><strong>Report what you see</strong>, good or bad:
-   <span>reporting.md</span>.</li>
+   <a href="../hardware/reporting.html">reporting.md</a>.</li>
 </ol>
 <p>If the image already carries sndstation, you are done. If you started from
 a plain Debian or Ubuntu image, install the package as in
@@ -98,7 +102,7 @@ and later. Releases up to 0.15.0 were built on Debian trixie and need trixie
 or later:</p>
 <ul>
 <li><code>sndstation_&lt;version&gt;_arm64.deb</code>, the platform;</li>
-<li><code>sndstation-vendors_&lt;version&gt;_all.deb</code>, the vendors a unit can trust.</li>
+<li><code>sndstation-vendors_&lt;version&gt;_all.deb</code>, the unit's vendors.</li>
 </ul>
 <p>How an invitee downloads them is TODO(#236/#120/#122). Copy both to the unit and
 install them together:</p>
@@ -110,9 +114,9 @@ builds for the system it runs on and writes both packages to <code>dist/</code>:
 sudo apt install ./dist/sndstation_*.deb ./dist/sndstation-vendors_*.deb
 </code></pre>
 <p>The <code>sndstation</code> package recommends <code>sndstation-vendors</code> but does not need
-it. That package holds the vendors SETTINGS → Software packages offers to
-trust (<span>updates.md</span>, "Vendors"). Without it the launcher
-works, and that page lists no vendors.</p>
+it. That package holds the vendors SETTINGS → Software packages lists, and
+installing it adds each one's apt source (<a href="../updates.html">updates.md</a>,
+"Vendors"). Without it the launcher works, and that page lists no vendors.</p>
 <p>On a recognized handheld the install also sets the unit up to boot into
 the launcher:
 - a realtime allowance for the audio thread;
@@ -120,7 +124,7 @@ the launcher:
 - tty1 autologin into the session;
 - a sudo rule that lets SETTINGS → Network run its one network helper as root.</p>
 <p>Anywhere else it changes nothing outside <code>/usr/share/sndstation</code>.
-<span><code>docs/launcher.md</code></span> has the details and the switches
+<a href="../launcher.html"><code>docs/launcher.md</code></a> has the details and the switches
 (<code>SNDSTATION_BOOT=no</code>, <code>SNDSTATION_USER=…</code>).</p>
 <h2 id="verifying">Verifying</h2>
 <p>A working install on a handheld:</p>
@@ -130,13 +134,13 @@ the launcher:
 <li><strong>ABOUT shows the unit.</strong> It lists the platform's version, the board, the
   SOC ID, the kernel, CPU, memory, SDL, the display, and the input device. The
   SOC ID is how the unit is told from another of its model
-  (<span>unit-identity.md</span>).</li>
+  (<a href="../unit-identity.html">unit-identity.md</a>).</li>
 <li><strong>The pad works.</strong> A unit whose pad is not in the gamepad database opens
   Controls on a first-run card. With no pad found at all the launcher says "No
   gamepad found" and leaves to a shell after five seconds.</li>
 <li><strong>Exit to shell</strong> ends the session and leaves a prompt. It is the last
   item of the power menu: press MENU (the unit's FN, Home, or MENU key), or
-  hold SELECT and press START (<span>launcher.md</span>, "The power
+  hold SELECT and press START (<a href="../launcher.html">launcher.md</a>, "The power
   menu"). Logging out logs in again, and the launcher returns.</li>
 </ul>
 <p>From a shell on the unit (ssh will do), after logging in again so that
@@ -147,17 +151,17 @@ ulimit -r                      # 95: the audio thread may run realtime
 </code></pre>
 <p>The install script says which user it set up and warns if that user is
 missing from <code>audio</code>, <code>video</code> or <code>input</code>
-(<span>launcher.md</span>, "Booting into it"). A realtime refusal is
+(<a href="../launcher.html">launcher.md</a>, "Booting into it"). A realtime refusal is
 said on stderr and shown on AUDIO / DIAGNOSTICS, row Thread
-(<span>rt-bench.md</span>, "Allowing it").</p>
+(<a href="../rt-bench.html">rt-bench.md</a>, "Allowing it").</p>
 <p>On a unit with stick lights, <code>sndstation --led-test</code> lights the rings in
-turn (<span>stick-leds.md</span>).</p>
+turn (<a href="../stick-leds.html">stick-leds.md</a>).</p>
 <p>On a desktop, <code>./build/sndstation</code> opens a 640x480 window, and <code>ctest
 --test-dir build</code> runs the tests
 (<span>CONTRIBUTING</span>). Nothing
 else is installed, and nothing boots into it.</p>
-<p>If something is wrong, see <span>known-issues.md</span>.</p>
-    <p class="foot">From <code>docs/getting-started/installation.md</code> in sndstation/sndstation, at e50f69b. That repository is private for now.</p>
+<p>If something is wrong, see <a href="../hardware/known-issues.html">known-issues.md</a>.</p>
+    <p class="foot">From <code>docs/getting-started/installation.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
   </main>
 </div>
 

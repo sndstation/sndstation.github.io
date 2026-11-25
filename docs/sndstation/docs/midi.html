@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIDI devices · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html" aria-current="page">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="midi-devices">MIDI devices</h1>
+<p><code>&lt;sndstation/midi.h&gt;</code> gives an app the unit's MIDI devices, in and out. Every
+message crosses the API as UMP, the Universal MIDI Packet of MIDI 2.0:</p>
+<ul>
+<li>a MIDI 1.0 channel message is one 32-bit word (message type 2), sysex is a
+  run of two-word packets (type 3), so MIDI 1.0 gear loses nothing;</li>
+<li>a MIDI 2.0 device's channel voice messages (type 4: 16-bit velocity,
+  32-bit controllers) arrive at full resolution where the unit can carry
+  them.</li>
+</ul>
+<p>An app that wants bytes asks <code>UmpToBytes</code>, which also scales MIDI 2.0 down
+by the specification's rules. CLAP carries both: <code>CLAP_EVENT_MIDI2</code> is one
+UMP, for a plugin whose note port prefers the MIDI 2.0 dialect.</p>
+<h2 id="the-usual-app">The usual app</h2>
+<pre><code class="language-cpp">struct Synth : sndstation::midi::Sink {
+    void received(const sndstation::midi::Port&amp;, const uint32_t* ump, size_t words,
+                  uint64_t timeNs) override { /* queue it for the audio thread */ }
+};
+
+Synth synth;
+sndstation::midi::listen(&amp;synth);   // the unit's inputs, now and as plugged in
+...
+sndstation::midi::stop();
+</code></pre>
+<p><code>received()</code> runs on the SDK's MIDI thread, one packet per call: neither the
+audio thread nor the UI thread. Copy the packet somewhere lock-free and
+return.</p>
+<p>To pair a BLE-MIDI keyboard or pad, the launcher's <strong>Settings → MIDI → MIDI
+controllers</strong> scans for BLE-MIDI gear over Bluetooth; it is the same screen as
+<strong>Settings → Network → Bluetooth → MIDI controllers</strong>. Once connected, BlueZ
+gives the device an ALSA sequencer port, which <code>midi::open()</code> picks up as it
+appears, exactly as it would a USB keyboard.</p>
+<p>To see what a device sends, the launcher's <strong>Settings → MIDI → MIDI monitor</strong> lists
+every port and logs every input, decoded and in hex
+(<a href="launcher.html#midi-monitor">launcher.md</a>). Its source,
+<code>launcher/midimon.cpp</code>, is also a worked example of a <code>Sink</code> that hands
+packets to a UI thread through a lock-free ring.</p>
+<h2 id="the-units-choice-of-ports">The unit's choice of ports</h2>
+<p><code>system.json</code>:</p>
+<pre><code class="language-json">&quot;midi&quot;: { &quot;in&quot;: [&quot;*&quot;], &quot;out&quot;: [] }
+</code></pre>
+<p>Port names or ids, or <code>"*"</code> for every port there is (the sequencer's own
+loopback, Midi Through, excepted). <code>listen()</code> opens every input named, and
+any that is plugged in later. <code>outputs()</code> lists the outputs named, for apps
+that send. An app may also list <code>ports()</code> and <code>open()</code> what it likes.</p>
+<h2 id="tiers">Tiers</h2>
+<p>The handhelds' kernels differ in what they build. Across ROCKNIX's device
+families today, one has the sequencer with UMP and USB MIDI 2.0, several
+have the sequencer without UMP, and several have no sequencer at all, only
+the raw MIDI devices. So the backend decides when it starts, from what it
+finds, never from the build alone, and logs the tier it is on:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>When</th>
+<th>What you get</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sequencer (UMP)</td>
+<td>the kernel's sequencer has UMP, and alsa-lib is 1.2.10 or later</td>
+<td>MIDI 2.0 gear native; MIDI 1.0 gear converted by the kernel; ports shared with other programs</td>
+</tr>
+<tr>
+<td>sequencer (legacy)</td>
+<td>a sequencer without UMP, or an older alsa-lib</td>
+<td>MIDI 1.0, converted here; ports shared</td>
+</tr>
+<tr>
+<td>raw MIDI</td>
+<td>no sequencer</td>
+<td>MIDI 1.0, converted here; <code>/dev/snd/midiC*D*</code> directly, so one program per device</td>
+</tr>
+<tr>
+<td>none</td>
+<td>no MIDI, or another OS</td>
+<td>an empty port list</td>
+</tr>
+</tbody>
+</table></div>
+<p>alsa-lib's UMP calls are looked up at run time, not linked by name, so one
+binary built against a new alsa-lib still starts on a unit with an old one,
+on the legacy tier. A build against headers older than 1.2.10 leaves the
+UMP tier out.</p>
+<p><code>SNDSTATION_MIDI_TIER=legacy</code> or <code>=raw</code> starts lower down, to try a tier on a
+unit that has a better one.</p>
+<p>Timestamps are <code>CLOCK_MONOTONIC</code>, taken as each packet is read.</p>
+<h2 id="macos-and-windows">macOS and Windows</h2>
+<p>No devices yet: the build there uses a backend with an empty port list, and
+the UMP helpers work as everywhere. Both platforms' current APIs are
+UMP-native (CoreMIDI's <code>MIDIEventList</code>, Windows MIDI Services), so each is a
+backend of the same shape when it is wanted.</p>
+    <p class="foot">From <code>docs/midi.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

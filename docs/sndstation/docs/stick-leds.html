@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The lights around the analog sticks · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-root="../../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="../../users/identify-your-unit.html">Identifying your unit</a></li><li><a href="../../users/peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="getting-started/images.html">Getting an image, and going back</a></li><li><a href="getting-started/installation.html">Installation</a></li><li><a href="getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="hardware/supported.html">Supported hardware</a></li><li><a href="hardware/known-issues.html">Known issues</a></li><li><a href="hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="usb-networking.html">USB networking</a></li><li><a href="launcher.html">The sndstation launcher and session</a></li><li><a href="updates.html">Software packages</a></li><li><a href="rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="audio-stack.html">The audio stack</a></li><li><a href="audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="unit-identity.html">Which unit this is</a></li><li><a href="stick-leds.html" aria-current="page">The lights around the analog sticks</a></li><li><a href="device-events.html">Device events</a></li><li><a href="midi.html">MIDI devices</a></li><li><a href="audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../SECURITY.html">Security policy</a></li><li><a href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../SUPPORT.html">Support</a></li><li><a href="../.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../../index.html">Docs</a> / Subsystems</p>
+<h1 id="the-lights-around-the-analog-sticks">The lights around the analog sticks</h1>
+<p><strong>Part of the sndstation design.</strong> Built: <code>include/sndstation/leds.h</code>, <code>src/leds.cpp</code>,
+<code>config/leds.json</code>, <code>system/70-sndstation-leds.rules</code>,
+<code>sndstation --led-test</code> and <code>--led-slots</code>, and <code>test_leds</code>. Nothing draws on the rings yet:
+this is the layer that makes them a thing the rest of the program can
+draw on without knowing which handheld it is running on.</p>
+<h2 id="why-it-is-its-own-layer">Why it is its own layer</h2>
+<p>SDL cannot reach these lights. Its LED call speaks only to controllers it
+has a HID driver for (DualShock, Switch Pro); these are a microcontroller on
+the board, on a serial port, behind a power switch, and every family does
+it differently. Worse, the <em>same</em> board does it differently under different
+kernels: an RG40XX H's chip is <code>ttyS5</code> with a battery-driver power file on
+Anbernic's kernel, and <code>ttyS2</code> with an LED-device power switch on ROCKNIX's
+mainline one.</p>
+<p>So the program sees <strong>two rings of logical LEDs, LEFT and RIGHT, each with a
+count</strong>, and everything else is a fact about the unit, in <code>leds.json</code>:</p>
+<pre><code class="language-cpp">leds::fill(leds::Ring::Left, {0xFF, 0x6A, 0x00});
+leds::set(leds::Ring::Right, 3, {0, 0xD4, 0xC8});
+leds::commit();          // one write for both rings, from a worker thread
+</code></pre>
+<p><code>count()</code>, <code>addressable()</code> and <code>describe()</code> are all a caller ever needs to
+ask. A device that only has a few preset colors reports one LED per ring
+and shows the nearest preset to whatever is drawn, so drawing code written
+for the full-color rings degrades instead of branching.</p>
+<h2 id="isolated-by-unit">Isolated by unit</h2>
+<p><code>leds.json</code> is keyed the way <code>audio.json</code> is: the unit's id (the SOC ID on
+the ABOUT page), the board model (<code>/proc/device-tree/model</code>), then <code>"*"</code>.
+Unlike <code>audio.json</code> the matches are <strong>merged, widest first</strong>. Wiring is a
+fact about a model, shared by every unit of it, so the shipped entries are
+per model; what one unit needs differently is all its own entry says, in
+<code>~/.config/sndstation/leds.json</code>:</p>
+<pre><code class="language-json">&quot;H700-…&quot;: { &quot;rings&quot;: { &quot;right&quot;: [4, 5, 6, 7, 0, 1, 2, 3] } }
+&quot;H700-…&quot;: { &quot;enabled&quot;: false }
+</code></pre>
+<p>The <code>rings</code> map is logical index → wire slot, and the convention it maps
+onto is <strong>index 0 = North, clockwise, seen from the front</strong> (0 N, 1 NE,
+2 E … 7 NW), so drawing code can point at a direction.</p>
+<p><strong>A map is measured, never extrapolated.</strong> The first maps shipped for the
+RG40XX H and RG CubeXX were built from two or three positions per ring,
+on the assumption that the rest carry on evenly round it; on the box they
+were wrong — the right ring skipped a position — so the slots do not
+simply run round in order, and both entries went back to the wire order,
+marked unmeasured. Compass names and "clockwise" were also read two ways
+in the reports that went into them.</p>
+<p>So <code>--led-slots</code> asks about <strong>every</strong> slot, one at a time and at the
+holder's pace, as a <strong>clock position seen from the front</strong>:</p>
+<pre><code>$ sndstation --led-slots
+  slot  0&gt; R 9
+  slot  1&gt; R 7:30
+  …
+&quot;rings&quot;: { &quot;right&quot;: [6, 5, 4, 3, 2, 1, 0, 7],
+           &quot;left&quot;:  [8, 15, 14, 13, 12, 11, 10, 9] }
+</code></pre>
+<p>It computes the map from the answers and prints the entry to paste; a
+position given to two slots, or to none, is reported and the map refused
+rather than filled in. <code>--led-test</code> then lights the rings in logical order
+and prints the compass point each step should be: a correct map walks both
+rings N, NE, E… clockwise.</p>
+<p>Whether two units of one model can differ — a ring board that fits more
+than one way round — is not known. That is what a unit entry is for: the
+model's map is the first unit measured, and a unit that differs overrides
+<code>rings</code> alone under its own unit id.</p>
+<h2 id="nothing-is-guessed-at">Nothing is guessed at</h2>
+<ul>
+<li><strong>Nothing is touched until the first <code>commit()</code>.</strong> A unit with lights and
+  a program that has not drawn on them leaves them as the system left them.</li>
+<li><strong>The serial port is found by the UART it is wired to</strong> (<code>node:5001400.serial</code>,
+  matched against <code>/sys/class/tty/*/device</code>), never by a ttyS number alone,
+  which comes from device-tree aliases. A port that matches neither the
+  node nor an explicit path in the entry is not opened: on another board
+  the same number can be the Bluetooth chip.</li>
+<li><strong>The power switch</strong> is whichever listed form is present —
+  <code>led:&lt;name&gt;</code>, <code>file:&lt;path&gt;</code>, <code>gpio:&lt;chip&gt;:&lt;line&gt;</code> (the character device,
+  not the sysfs numbers mainline now allocates from 512) or <code>none</code>.</li>
+<li>A commit that changes nothing sends nothing, so drawing code can commit
+  every frame; changes are capped at 30 a second and a burst coalesces into
+  its last state.</li>
+<li><strong>Around a system sleep</strong> the rings go dark and the chip unpowered <em>before</em>
+  the sleep command runs, and the last frame is sent again after: the chip
+  forgets everything when the board sleeps.</li>
+</ul>
+<h2 id="the-two-protocols">The two protocols</h2>
+<h3 id="ch32-frame--anbernic-h700-rg40xx-hv-rg-cubexx"><code>ch32-frame</code> — Anbernic H700 (RG40XX H/V, RG CubeXX)</h3>
+<p>A CH32V003 on the H616/H700's UART5, 115200 8N1 raw:</p>
+<pre><code>[mode, brightness, 16 × (R, G, B), checksum]      checksum = sum &amp; 0xFF
+</code></pre>
+<p><strong>Verified on an RG40XX H under a ROCKNIX kernel</strong>: slots 0-7 are the right
+ring and 8-15 the left, each taking its own color (one LED lit at a time,
+by eye). Mode 1 is plain color and is all this sends; the chip's own
+effects (2-4 breathing, 5-6 rainbows) are animations the program can draw
+itself, in time with the music, which the chip's cannot be. Dark is mode 1
+at brightness 0.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>power</th>
+<th>port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mainline (ROCKNIX)</td>
+<td><code>/sys/class/leds/rgb:kbd_backlight/brightness</code></td>
+<td><code>ttyS2</code></td>
+</tr>
+<tr>
+<td>vendor (Anbernic, Knulli)</td>
+<td><code>/sys/class/power_supply/axp2202-battery/mcu_pwr</code></td>
+<td><code>ttyS5</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Sources: ROCKNIX's <code>quirks/platforms/H700/bin/analog_sticks_ledcontrol</code> and
+its uart5 device-tree patch; Knulli's <code>allwinner/h700/.../knulli-rgb-led</code>.</p>
+<h3 id="aislpc-preset--xifan-xf40h-and-kin-rk3326-rk3562"><code>aislpc-preset</code> — XiFan XF40H and kin (RK3326, RK3562)</h3>
+<p>One byte per command at 9600 baud, each sent several times: <code>1</code>=G <code>2</code>=B
+<code>3</code>=R <code>4</code>=G+B <code>5</code>=R+G <code>6</code>=B+R <code>7</code>=white (rainbow on some boards) <code>8</code>=flow
+<code>9</code>=off, <code>17-24</code> breathing; some boards ignore everything until an init
+byte <code>0x20 + leds/4 − 1</code>. <strong>No arbitrary color, no per-LED control.</strong>
+Every number that differs between boards is in the entry (<code>presets</code>,
+<code>off</code>, <code>init</code>, <code>repeat</code>, <code>gap_ms</code>), and a color drawn is shown as the
+nearest preset by hue, so a dim orange is still orange.</p>
+<p><strong>Not verified here</strong>, so the shipped XF40H entry is disabled: the protocol
+is bmdhacks' reverse-engineering on the RG52 Mini (dArkOS) as ported in
+AveyondFly's ROCKNIX fork, and the XF40H's port (<code>ff178000.serial</code>), power
+line (GPIO2_A1, assumed <code>gpiochip2:1</code>), init byte and repeat count are all
+unconfirmed. <code>gpioinfo</code> and <code>/sys/class/tty/*/device</code> on the unit settle
+them.</p>
+<h2 id="permissions">Permissions</h2>
+<p>sndstation does not run as root, and should not — it hosts third-party
+plugins. The serial port is the <code>dialout</code> group's on Debian already; the
+power switch is a sysfs attribute no group can write, so on a handheld the
+package's install script links in a
+udev rule handing exactly that file to <code>dialout</code>, for both the mainline and
+the vendor form. A rule only applies when its device appears, which is at
+boot, so the package's install script replays the "add" for those two
+devices alone; without that, installing on a running box changed nothing
+until a reboot. The user sndstation runs as has to be in <code>dialout</code>. The
+XF40H's GPIO chip is not handed over yet: a GPIO bank holds more than one
+LED's power, and that rule waits until the line is confirmed.</p>
+<h2 id="checking-a-unit">Checking a unit</h2>
+<pre><code class="language-sh">sndstation --led-slots    # MEASURE: every wire slot, asked about one at a
+                            # time; prints the &quot;rings&quot; entry
+sndstation --led-test     # CHECK: each logical LED in turn, with the
+                            # compass point it should be, then both rings in
+                            # their stick colours, then dark
+</code></pre>
+<p>The first line says what was found — driver, port, power switch, rings, and
+which entries it came from — or exactly why nothing was.</p>
+    <p class="foot">From <code>docs/stick-leds.md</code> in sndstation/sndstation, at 3d5c5ed. That repository is private for now.</p>
+  </main>
+</div>
+
+<script src="../../search-index.js" defer></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Identifying your unit · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-root="../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="identify-your-unit.html" aria-current="page">Identifying your unit</a></li><li><a href="peripherals.html">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="../sndstation/docs/getting-started/images.html">Getting an image, and going back</a></li><li><a href="../sndstation/docs/getting-started/installation.html">Installation</a></li><li><a href="../sndstation/docs/getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="../sndstation/docs/hardware/supported.html">Supported hardware</a></li><li><a href="../sndstation/docs/hardware/known-issues.html">Known issues</a></li><li><a href="../sndstation/docs/hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="../sndstation/docs/usb-networking.html">USB networking</a></li><li><a href="../sndstation/docs/launcher.html">The sndstation launcher and session</a></li><li><a href="../sndstation/docs/updates.html">Software packages</a></li><li><a href="../sndstation/docs/rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="../sndstation/docs/audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="../sndstation/docs/audio-stack.html">The audio stack</a></li><li><a href="../sndstation/docs/audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="../sndstation/docs/gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="../sndstation/docs/unit-identity.html">Which unit this is</a></li><li><a href="../sndstation/docs/stick-leds.html">The lights around the analog sticks</a></li><li><a href="../sndstation/docs/device-events.html">Device events</a></li><li><a href="../sndstation/docs/midi.html">MIDI devices</a></li><li><a href="../sndstation/docs/audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../sndstation/SECURITY.html">Security policy</a></li><li><a href="../sndstation/CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../sndstation/SUPPORT.html">Support</a></li><li><a href="../sndstation/.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../index.html">Docs</a> / Users</p>
+<h1 id="identifying-your-unit">Identifying your unit</h1>
+<p><strong>For:</strong> someone holding a handheld who does not know which model or chip it
+is, or which device tree it needs.</p>
+<p>sndstation picks what to run by the unit's <strong>chip</strong>, not by the name on the
+box. A shop names the model, and two units sold under one name can hold
+different boards. Find the family first, then, for an RK3326 unit, find the
+exact board. RK3326 takes most of this page, because it is the hard case.</p>
+<h2 id="which-family">Which family</h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Sold as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RK3326</td>
+<td>the RG351 series, R33S, R36S and its clones, R40XX, RGB10, K36, XU10</td>
+</tr>
+<tr>
+<td>RK3566</td>
+<td>the RG353 series, RGB30, RK2023, X55</td>
+</tr>
+<tr>
+<td>H700</td>
+<td>the RG35XX series, RG40XX, RG34XX, RG28XX, RGcubeXX</td>
+</tr>
+<tr>
+<td>A133</td>
+<td>TrimUI Smart Pro, Brick, Brick Pro</td>
+</tr>
+</tbody>
+</table></div>
+<p><a href="../sndstation/docs/hardware/supported.html">Supported hardware</a>
+lists the private-beta units and the chip in each, and
+<a href="peripherals.html">Peripherals</a> says what each family takes over USB.</p>
+<p>The label printed on the circuit board is a good second check. On an R36S it
+is six screws away, with the battery unplugged first. The label names the
+board, not the screen panel, and it can be faked (see
+<a href="#when-it-is-not-an-rk3326-at-all">When it is not an RK3326</a>).</p>
+<h2 id="what-you-have-to-get-right-by-family">What you have to get right, by family</h2>
+<p>No card works out which board it is in. Every card carries all of its
+family's device trees in <code>dtbs/</code> and their overlays in <code>overlays/</code>, and one
+file on the card's FAT partition names which to use. What you have to find
+out before you set that file differs by family:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>RK3326</th>
+<th>H700</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What differs between units</td>
+<td>the <strong>board</strong>: panel, joypad, audio, keys. One model name can cover many boards</td>
+<td>the <strong>RAM</strong>, DDR3 or DDR4. The model name fixes the board</td>
+</tr>
+<tr>
+<td>What you choose</td>
+<td>a device tree, plus any overlays it needs</td>
+<td>the image for the unit's RAM, then the device tree for the model</td>
+</tr>
+<tr>
+<td>Where it is set</td>
+<td><code>config.txt</code>: <code>fdtfile=</code> and <code>overlays=</code></td>
+<td><code>extlinux/extlinux.conf</code>: <code>FDT</code> and <code>FDTOVERLAYS</code></td>
+</tr>
+<tr>
+<td>How you find out</td>
+<td>the device tree on the original card, through <a href="#find-it-from-the-original-card">DTB Detective</a></td>
+<td>the model, then the unit's RAM (<a href="#h700-match-the-ram-then-the-model">H700</a>)</td>
+</tr>
+<tr>
+<td>What a wrong choice does</td>
+<td>a dark screen, wrong buttons, or no sound</td>
+<td>the wrong RAM hangs before the kernel starts</td>
+</tr>
+</tbody>
+</table></div>
+<p>RK3566 sits between them: pick the device tree for the model in
+<code>extlinux/extlinux.conf</code>, like H700, and a few boards (X55, X35S, RG-DS) take
+a different bootloader. The A133 units have one board each, so there is
+nothing to pick.</p>
+<h3 id="device-trees-and-overlays">Device trees and overlays</h3>
+<p>A <strong>device tree</strong> (<code>.dtb</code>) describes a whole board, and a unit boots from
+exactly one. An <strong>overlay</strong> (<code>.dtbo</code>) is a small patch applied on top of that
+device tree: it changes one part, such as the panel, and leaves the rest as
+it was. An overlay never replaces the device tree. The right device tree
+with a missing overlay still leaves that one part wrong.</p>
+<p>Overlays are applied in the order they are listed, after the device tree.
+RK3326 is the family that needs them most. Two you will meet there:</p>
+<ul>
+<li><strong><code>mipi-panel.dtbo</code></strong>, for a unit whose screen is not the one its device
+  tree expects.</li>
+<li><strong>The USB OTG overlay.</strong> The RK3326 device trees taken from stock cards,
+  all but the GKD Pixel 2's, leave the OTG port switched off. Without the
+  overlay, <a href="../sndstation/docs/usb-networking.html">USB networking</a>
+  binds but nothing reaches the cable.</li>
+</ul>
+<h2 id="rk3326-find-the-device-tree-before-you-flash">RK3326: find the device tree before you flash</h2>
+<h3 id="why-rk3326-is-different">Why RK3326 is different</h3>
+<p>Hardkernel's ODROID-GO Advance was the first of these. Anbernic cloned it,
+then Powkiddy, then many more shops, and each one used its own parts: a
+different panel, joypad, audio chip, or key wiring. By one count there are
+more than 70 named RK3326 variants, not counting the R36S clones, and new
+names turn up every week. "R36S" alone can mean dozens of boards, each with
+its own device tree. The
+<a class="ext" href="https://handhelds.wiki/Category:RK3326">handhelds.wiki RK3326 list</a> and its
+<a class="ext" href="https://handhelds.wiki/R36S_Clones">R36S clones page</a> track them.</p>
+<p>The device tree (a <code>.dtb</code> file) tells the kernel which parts the board has.
+With the wrong one, the screen stays dark, the buttons are wrong, or there is
+no sound.</p>
+<p><strong>The RK3326 image boots on the first try only on an Anbernic RG351V.</strong> On
+any other RK3326 unit, find its device tree first.</p>
+<h3 id="find-it-from-the-original-card">Find it from the original card</h3>
+<ol>
+<li><strong>Keep the card the unit came with.</strong> Do not flash it or wipe it. It
+   holds the stock device tree, and it is the only proof of which board you
+   have.</li>
+<li><strong>Copy the <code>.dtb</code> files off it.</strong> Put the card in a computer and look for
+   files ending in <code>.dtb</code> on its partitions. A card can hold several. Only
+   one is loaded, and which one can depend on the card's start-up scripts, so
+   copy them all.</li>
+<li><strong>Upload them to <a class="ext" href="https://rocknix.gosk.in/dtbo/">DTB Detective</a>.</strong> It
+   reads the panel, joypad, audio, and keys out of a device tree and shows
+   the closest known device, with the evidence. It names the device tree to
+   use under ROCKNIX and sndstation, and the overlays to apply <strong>on top of
+   it</strong>, if any. Treat a match as a strong hint, not a verdict. The site
+   keeps what you upload.</li>
+<li><strong>Set both on the sndstation card.</strong> Before the first boot, open
+   <code>config.txt</code> on the card's FAT partition. Name the device tree on the
+   <code>fdtfile=</code> line, and any overlays on the <code>overlays=</code> line, in the order to
+   apply them:</li>
+</ol>
+<p><code>fdtfile=rk3326-gameconsole-r36s.dtb
+   overlays=mipi-panel.dtbo</code></p>
+<p>Both must be files the card already holds, in <code>dtbs/</code> and <code>overlays/</code>.
+   To move the card to another RK3326 board, edit these two lines; there is
+   nothing to copy.
+5. <strong>Put the result in your report.</strong> Name the device tree and every overlay
+   in the <a href="../sndstation/docs/hardware/reporting.html">hardware report</a>
+   for the unit.</p>
+<p>DTB Detective comes from the <a class="ext" href="https://rocknix.org">ROCKNIX</a> community, whose
+work on these boards made most of this possible.</p>
+<h3 id="when-it-is-not-an-rk3326-at-all">When it is not an RK3326 at all</h3>
+<p>Some cheap "R36S" units are not RK3326 inside, even when the chip says so.
+The best-known is the <strong>GA36 fake</strong>. Its board is marked
+<code>GA36-MB V1.0-20250730</code>, and its chip is marked RK3326, but it is an
+Allwinner A33: a 32-bit chip that sndstation does not run on. The signs:</p>
+<ul>
+<li>The stock card runs EmuELEC 4.7 on a Linux 3.4 kernel.</li>
+<li>The card has an Android-style layout, with a raw U-Boot partition and a
+  boot image, and <strong>no <code>.dtb</code> file</strong> at all.</li>
+<li>DTB Detective has nothing to read, since there is no device tree.</li>
+</ul>
+<p><a class="ext" href="https://github.com/phaseloop/R36S-console-clone---GA36-MB-V1.0-20250730">phaseloop's GA36 notes</a>
+document the board, its partitions, and a recovery image. The unit cannot
+boot without its original card, so keep that card.</p>
+<p>A GA36 is a dead end for sndstation. Its battery and screen still make good
+spares. For something to run sndstation on today, a Raspberry Pi with
+Raspberry Pi OS Lite (trixie) takes the <code>.deb</code> as it is and runs full screen
+(<a href="../sndstation/docs/getting-started/installation.html#installing-on-a-handheld">Installing on a handheld</a>).</p>
+<h3 id="buying-an-rk3326-unit">Buying an RK3326 unit</h3>
+<p>An R36S is a lottery: the name says little about the board inside. Any other
+RK3326 model is a better bet. The maintainers' current pick is the <strong>K36</strong>:
+its two USB ports and headphone jack are on the top edge, out of your hands'
+way, and it has one microSD slot. It is not one of the beta's slots. The
+<a class="ext" href="https://sndstation.github.io/devices/">device guide</a> ranks the rest.</p>
+<h2 id="h700-match-the-ram-then-the-model">H700: match the RAM, then the model</h2>
+<p>An H700 model has one board, so its name tells you the device tree. The
+table in
+<a href="../sndstation/docs/hardware/supported.html#h700-units">Supported hardware</a>
+names each one. A model sold with a second screen panel has a second device
+tree, such as <code>sun50i-h700-anbernic-rg35xx-h-rev6-panel.dtb</code>: on H700 a
+panel revision is its own device tree, not an overlay.</p>
+<p>What varies is the <strong>RAM</strong>. Units of one model ship with DDR3 or DDR4. The
+device tree is the same for both, but the bootloader that starts the RAM is
+not. An H700 image is built for one or the other and says so in its name,
+as in <code>sndstation-H700-DDR4-….img.xz</code>. The wrong one hangs before the
+kernel starts, with nothing on screen.</p>
+<p>To tell which you have, read the <code>vdd-dram</code> regulator on a running unit, for
+example under the stock firmware:</p>
+<pre><code class="language-sh">grep . /sys/class/regulator/regulator.*/name     # find vdd-dram
+cat /sys/class/regulator/regulator.N/microvolts  # N from the line above
+</code></pre>
+<p><code>1100000</code> is DDR4, which most units have. <code>1200000</code> is DDR3. A DDR3 card
+already applies its <code>ddr3</code> overlay first; list any other overlay after it.</p>
+<p>Then set the model's device tree on the <code>FDT</code> line of
+<code>extlinux/extlinux.conf</code>, and any overlays on the <code>FDTOVERLAYS</code> line,
+separated by spaces:</p>
+<pre><code>FDT /dtbs/sun50i-h700-anbernic-rg40xx-h.dtb
+FDTOVERLAYS /overlays/my-panel.dtbo
+</code></pre>
+<h2 id="once-sndstation-runs">Once sndstation runs</h2>
+<p>The launcher's ABOUT page shows the unit's own identity, read from the chip:
+the <strong>SOC ID</strong> row. Two units of one model get different ids. See
+<a href="../sndstation/docs/unit-identity.html">Which unit this is</a>.</p>
+    <p class="foot"><code>users/identify-your-unit.md</code> · changed 2026-11-25</p>
+  </main>
+</div>
+
+<script src="../search-index.js" defer></script>
+<script src="../assets/search.js" defer></script>
+</body>
+</html>

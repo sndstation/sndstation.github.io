@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Peripherals: what works on your unit · sndstation docs</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600&amp;family=Silkscreen&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-root="../">
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="../index.html">sndstation <span>docs</span></a>
+    <form class="search" action="../search.html" role="search">
+      <label class="sr-only" for="q">Search the docs</label>
+      <input id="q" name="q" type="search" placeholder="Search the docs" autocomplete="off"
+             spellcheck="false" aria-controls="search-panel" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <div id="search-panel" class="panel" role="listbox" aria-label="Pages found" hidden></div>
+    </form>
+    <a class="out" href="https://sndstation.github.io/">sndstation.github.io</a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" aria-label="Pages">
+<div class="side-group"><ul><li><a href="../index.html">Home</a></li></ul></div>
+<div class="side-group"><span class="group">Users</span><ul><li><a href="identify-your-unit.html">Identifying your unit</a></li><li><a href="peripherals.html" aria-current="page">Peripherals: what works on your unit</a></li></ul></div>
+<div class="side-group"><span class="group">Getting started</span><ul><li><a href="../sndstation/docs/getting-started/images.html">Getting an image, and going back</a></li><li><a href="../sndstation/docs/getting-started/installation.html">Installation</a></li><li><a href="../sndstation/docs/getting-started/quickstart.html">Quickstart</a></li></ul></div>
+<div class="side-group"><span class="group">Hardware</span><ul><li><a href="../sndstation/docs/hardware/supported.html">Supported hardware</a></li><li><a href="../sndstation/docs/hardware/known-issues.html">Known issues</a></li><li><a href="../sndstation/docs/hardware/reporting.html">Reporting a hardware result</a></li></ul></div>
+<div class="side-group"><span class="group">Subsystems</span><ul><li><a href="../sndstation/docs/usb-networking.html">USB networking</a></li><li><a href="../sndstation/docs/launcher.html">The sndstation launcher and session</a></li><li><a href="../sndstation/docs/updates.html">Software packages</a></li><li><a href="../sndstation/docs/rt-bench.html">--rt-bench: measuring the audio thread&#x27;s headroom</a></li><li><a href="../sndstation/docs/audio-page.html">Audio: one model, one decision-maker, a page that shows it</a></li><li><a href="../sndstation/docs/audio-stack.html">The audio stack</a></li><li><a href="../sndstation/docs/audio-device.html">The audio device layer: the mixer, the test signals, the buffer and the card</a></li><li><a href="../sndstation/docs/gamepad-layout.html">Gamepad names, prints and layout</a></li><li><a href="../sndstation/docs/unit-identity.html">Which unit this is</a></li><li><a href="../sndstation/docs/stick-leds.html">The lights around the analog sticks</a></li><li><a href="../sndstation/docs/device-events.html">Device events</a></li><li><a href="../sndstation/docs/midi.html">MIDI devices</a></li><li><a href="../sndstation/docs/audio-levels.html">Audio levels: the system volume and the maximums</a></li></ul></div>
+<div class="side-group"><span class="group">Project</span><ul><li><a href="../sndstation/SECURITY.html">Security policy</a></li><li><a href="../sndstation/CODE_OF_CONDUCT.html">Code of Conduct</a></li><li><a href="../sndstation/SUPPORT.html">Support</a></li><li><a href="../sndstation/.github/ISSUE_TEMPLATE/hardware-report.yml.html">hardware-report.yml</a></li></ul></div>
+<div class="side-group"><span class="group">Device guide</span><ul><li><a href="https://sndstation.github.io/devices/">Handheld Power Rankings</a></li></ul></div>
+  </nav>
+  <main id="main" class="prose">
+    <p class="crumb"><a href="../index.html">Docs</a> / Users</p>
+<h1 id="peripherals-what-works-on-your-unit">Peripherals: what works on your unit</h1>
+<p><strong>For:</strong> someone about to plug something into a handheld and wanting to know
+whether it will work before buying it.</p>
+<p>What a unit supports depends on its chip, not on its brand name. Find your
+family in the table: the <a class="ext" href="https://sndstation.github.io/devices/">device guide</a>
+and <a href="identify-your-unit.html">Identifying your unit</a> say which one you
+have.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>RK3326</th>
+<th>RK3566</th>
+<th>H700</th>
+<th>TrimUI (A133)</th>
+<th>PlayStation Classic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Audio interface, MIDI keyboard</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>USB stick, card reader</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>exFAT and NTFS drives</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td>USB-serial adapter</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Game controller</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>basic only</td>
+<td>basic only</td>
+</tr>
+<tr>
+<td>Bluetooth</td>
+<td>yes</td>
+<td>yes</td>
+<td>built-in only</td>
+<td>yes</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Wi-Fi dongle</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes, <code>0.15.1-h700</code> or later</td>
+<td>not needed</td>
+<td>required</td>
+</tr>
+<tr>
+<td>Webcam</td>
+<td>no</td>
+<td>no</td>
+<td>add-on</td>
+<td>no</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p>Models in each family: RK3326 is the RG351 series, R33S/R36S and RGB10;
+RK3566 is the RG353 series, RGB30, RK2023 and X55; H700 is the RG35XX
+series, RG40XX, RG34XX, RG28XX and RGcubeXX; A133 is the TrimUI Smart Pro,
+Brick and Brick Pro.</p>
+<h2 id="audio-and-midi">Audio and MIDI</h2>
+<p>Every unit takes a class-compliant USB audio interface or MIDI controller,
+with MIDI 2.0. Class-compliant means the device needs no vendor driver, which
+is most interfaces made in the last decade and nearly every MIDI keyboard.</p>
+<p>Interfaces that need a vendor driver do not work, and are not planned:
+Native Instruments, Line 6, and the Edirol and Roland units that use their
+own protocols. If a device's manual tells you to install a driver on a PC, it
+will not work here.</p>
+<h2 id="storage">Storage</h2>
+<p>USB sticks, card readers and USB drives work on every unit. On the TrimUI
+units and the PlayStation Classic, format the drive <strong>FAT32 or ext4</strong>: those
+two kernels have no exFAT or NTFS support, so a drive formatted the way it
+came out of the shop may not mount. The other three families read exFAT and
+NTFS as they are.</p>
+<h2 id="controllers">Controllers</h2>
+<p>Every unit handles a generic USB or Bluetooth gamepad. Console pads that need
+their own driver are patchier: Xbox pads work on RK3326 and RK3566,
+PlayStation pads on RK3566 and the H700, and Nintendo and Steam pads only on
+RK3326. The TrimUI units and the PlayStation Classic have generic support
+only, so a console pad may show up with its buttons mapped oddly or not at
+all.</p>
+<h2 id="bluetooth">Bluetooth</h2>
+<p>RK3326 and RK3566 take a Bluetooth USB dongle as well as using whatever is
+built in. The H700 can use its own Bluetooth but not a dongle. The TrimUI
+units have Bluetooth on the same chip as their Wi-Fi. The PlayStation Classic
+has no Bluetooth at all.</p>
+<h2 id="wi-fi">Wi-Fi</h2>
+<p>Most units have Wi-Fi of their own and need nothing. Two cases do not:</p>
+<ul>
+<li>The <strong>RG28XX</strong> has no Wi-Fi, so a USB dongle is its only way onto a
+  network. Use a Realtek 8188EU, 8188CU/8192CU or 8192EU dongle; these are
+  the cheap ones sold for the Raspberry Pi.</li>
+<li>The <strong>PlayStation Classic</strong> likewise needs a dongle, and the supported one
+  is a Realtek RTL8821CU.</li>
+</ul>
+<p>Other chipsets are not supported, so check the chipset and not the brand
+before buying. Dongle Wi-Fi also needs the matching firmware, which the
+images carry.</p>
+<p><strong>On the H700, the image has to be recent enough.</strong> The driver arrived in
+the <code>0.15.1-h700</code> release; the H700 image in <code>0.15.1</code> came before it, and a
+dongle does nothing there. Take the H700 image from <code>0.15.1-h700</code> or later.</p>
+<p>Watch the filename when you do. An image is named for the date it was built,
+not for the release it came from, so the H700 image in <code>0.15.1</code> and the one
+in <code>0.15.1-h700</code> are <strong>both</strong> called
+<code>sndstation-H700-DDR4-20261001.img.xz</code> and are not the same image. If you
+have downloaded both they will collide in one folder: keep them apart, or
+check each against the <code>.sha256</code> beside it in the release.</p>
+<h2 id="webcams">Webcams</h2>
+<p>No unit supports a USB webcam out of the box. On the H700 the driver can be
+installed as an add-on package afterwards, because that kernel can load
+modules and already has the video framework built in. On the other families
+it cannot be added after the fact: the TrimUI and PlayStation Classic kernels
+load no modules at all, and the RK3326 and RK3566 would need a kernel
+rebuild.</p>
+<p>Webcams are not in the kernels because no supported unit needs one to do
+anything it is meant to do. A driver goes in when a unit would otherwise be
+unable to do something basic, which is why the Wi-Fi dongle drivers above are
+there.</p>
+<h2 id="if-something-does-not-work">If something does not work</h2>
+<p>Peripheral support in the table is what the kernel offers, not a promise that
+every device in a class has been tried. If a device in a supported class does
+not work, say what the unit is and what <code>lsusb</code> reports for the device.</p>
+    <p class="foot"><code>users/peripherals.md</code> · changed 2026-11-25</p>
+  </main>
+</div>
+
+<script src="../search-index.js" defer></script>
+<script src="../assets/search.js" defer></script>
+</body>
+</html>
